@@ -1,0 +1,14 @@
+[
+  {
+    "username": "student01",
+    "password": "123456",
+    "email": "student01@example.com",
+    "ai_api_key": ""
+  },
+  {
+    "username": "student02",
+    "password": "123456",
+    "email": "student02@example.com",
+    "ai_api_key": ""
+  }
+]
