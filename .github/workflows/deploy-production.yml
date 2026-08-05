@@ -1,12 +1,14 @@
-name: Deploy Production (Manual)
+name: Deploy Production
 
 on:
+  push:
+    branches: [production]
   workflow_dispatch:
     inputs:
       branch:
         description: "Branch to deploy"
         required: false
-        default: "main"
+        default: "production"
 
 concurrency:
   group: production-deploy
@@ -20,7 +22,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.branch || 'main' }}
+          ref: ${{ github.event.inputs.branch || 'production' }}
 
       - name: Install rsync
         run: |
