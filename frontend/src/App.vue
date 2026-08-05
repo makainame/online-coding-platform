@@ -134,7 +134,10 @@ onMounted(loadUser);
       </nav>
       <div class="user-area">
         <template v-if="user">
-          <img v-if="user.avatar" :src="user.avatar" class="user-avatar" alt="" />
+          <div class="avatar-wrap">
+            <img v-if="user.avatar" :src="user.avatar" class="user-avatar" alt="" />
+            <span v-else class="avatar-fallback">{{ (user.username || "U")[0].toUpperCase() }}</span>
+          </div>
           <span class="user-chip">{{ user.username }}</span>
           <span class="role-chip" :class="user.role">
             {{ user.role === "teacher" ? "教师" : "学生" }}
@@ -224,11 +227,31 @@ onMounted(loadUser);
 </template>
 
 <style scoped>
+.avatar-wrap {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+}
+
 .user-avatar {
   width: 32px;
   height: 32px;
   border-radius: 50%;
   object-fit: cover;
+}
+
+.avatar-fallback {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #176b5b;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  user-select: none;
 }
 
 .avatar-upload {
