@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import Problem, TestCase, User
+from ..models import CodeDraft, Feedback, Problem, Submission, TestCase, User
 from ..schemas import (
     ProblemCreate,
     ProblemDetail,
@@ -196,5 +196,21 @@ def delete_problem(
     problem = db.query(Problem).filter(Problem.id == problem_id).first()
     if problem is None:
         raise HTTPException(status_code=404, detail="题目不存在")
+    db.query(CodeDraft).filter(CodeDraft.problem_id == problem_id).delete(
+        synchronize_session=False
+    )
+    submission_ids = [
+        submission_id
+        for (submission_id,) in db.query(Submission.id)
+        .filter(Submission.problem_id == problem_id)
+        .all()
+    ]
+    if submission_ids:
+        db.query(Feedback).filter(
+            Feedback.submission_id.in_(submission_ids)
+        ).delete(synchronize_session=False)
+        db.query(Submission).filter(
+            Submission.id.in_(submission_ids)
+        ).delete(synchronize_session=False)
     db.delete(problem)
     db.commit()

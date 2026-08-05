@@ -266,6 +266,55 @@ def test_teacher_can_create_problem(client):
     assert len(data["test_cases"]) == 2
 
 
+def test_teacher_delete_problem_with_related_records(client):
+    teacher_headers = login(client, username="teacher", password="teacher123")
+    created = client.post(
+        "/api/problems",
+        headers=teacher_headers,
+        json={
+            "title": "删除测试题",
+            "description": "输出固定结果。",
+            "difficulty": "easy",
+            "tags": "测试",
+            "test_cases": [
+                {"input": "1", "expected_output": "2", "is_sample": True},
+            ],
+        },
+    )
+    assert created.status_code == 201
+    problem_id = created.json()["id"]
+
+    student_headers = login(client)
+    client.put(
+        f"/api/drafts/{problem_id}",
+        headers=student_headers,
+        json={"code": "print(2)", "language": "python"},
+    )
+    submission = client.post(
+        "/api/submissions",
+        headers=student_headers,
+        json={
+            "problem_id": problem_id,
+            "code": "print(2)",
+            "language": "python",
+        },
+    )
+    assert submission.status_code == 201
+    client.post(
+        f"/api/feedback/{submission.json()['id']}",
+        headers=student_headers,
+    )
+
+    deleted = client.delete(
+        f"/api/problems/{problem_id}",
+        headers=teacher_headers,
+    )
+    assert deleted.status_code == 204
+
+    problems = client.get("/api/problems", headers=student_headers).json()
+    assert not any(item["id"] == problem_id for item in problems)
+
+
 def test_teacher_import_problems(client):
     headers = login(client, username="teacher", password="teacher123")
     payload = [
