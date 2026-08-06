@@ -169,7 +169,12 @@ for i in range(1, n + 1):
     ),
     _cp(
         "字符串切片反转",
-        "输入一个字符串，使用字符串切片反转后输出。",
+        (
+            "输入一个字符串，使用字符串切片反转后输出。\n\n"
+            "示例 1：\n输入：\nhello\n输出：\nolleh\n\n"
+            "示例 2：\n输入：\nPython\n输出：\nnohtyP\n\n"
+            "示例 3：\n输入：\nabc\n输出：\ncba"
+        ),
         "easy",
         "Day04,字符串,切片",
         [
@@ -178,7 +183,7 @@ for i in range(1, n + 1):
             ("abc", "cba"),
         ],
         """s = input().strip()
-print(s[::-1])
+# 使用字符串切片反转并输出
 """,
     ),
     _cp(
