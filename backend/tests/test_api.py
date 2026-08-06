@@ -632,6 +632,26 @@ def test_teacher_can_create_update_and_delete_exam(client):
     assert deleted.status_code == 204
 
 
+def test_exam_title_cannot_be_numeric_only(client):
+    teacher_headers = login(client, username="teacher", password="teacher123")
+    problems = client.get("/api/problems", headers=teacher_headers).json()
+    problem_ids = [item["id"] for item in problems[:1]]
+
+    response = client.post(
+        "/api/admin/exams",
+        headers=teacher_headers,
+        json={
+            "title": "333",
+            "description": "无效标题",
+            "duration_minutes": 30,
+            "status": "draft",
+            "problem_ids": problem_ids,
+        },
+    )
+    assert response.status_code == 400
+    assert "有意义的名称" in response.json()["detail"]
+
+
 def test_teacher_auto_create_exam_by_knowledge_points(client):
     teacher_headers = login(client, username="teacher", password="teacher123")
     created = client.post(

@@ -168,8 +168,7 @@ async function openEdit(row) {
 }
 
 async function saveExam() {
-  if (!form.title.trim()) {
-    ElMessage.error("请输入考试标题");
+  if (!validateTitle()) {
     return;
   }
   if (form.selectionMode === "auto" && form.problem_ids.length === 0) {
@@ -363,9 +362,17 @@ function formatTime(value) {
   return value ? new Date(value).toLocaleString() : "-";
 }
 
+function validateTitle() {
+  const title = form.title.trim();
+  if (title.length < 2 || !/[\u4e00-\u9fa5A-Za-z]/.test(title)) {
+    ElMessage.error("考试标题不能是纯数字或太短，请填写有意义的名称");
+    return false;
+  }
+  return true;
+}
+
 function nextStep() {
-  if (!form.title.trim()) {
-    ElMessage.error("请输入考试名称");
+  if (!validateTitle()) {
     return;
   }
   activeStep.value = 1;

@@ -37,6 +37,16 @@ from ..starter_codes import get_starter_code
 router = APIRouter(tags=["exams"])
 
 
+def _validate_exam_title(title: str) -> str:
+    stripped = title.strip()
+    if len(stripped) < 2 or not any(char.isalpha() for char in stripped):
+        raise HTTPException(
+            status_code=400,
+            detail="考试标题不能是纯数字或太短，请填写有意义的名称",
+        )
+    return stripped
+
+
 def _class_name_map(db: Session, class_ids: set[int]) -> dict[int, str]:
     if not class_ids:
         return {}
@@ -200,9 +210,7 @@ def create_exam(
     db: Session = Depends(get_db),
     teacher: User = Depends(require_teacher),
 ) -> ExamDetail:
-    title = payload.title.strip()
-    if not title:
-        raise HTTPException(status_code=400, detail="考试标题不能为空")
+    title = _validate_exam_title(payload.title)
     if payload.class_id is not None:
         class_group = db.query(ClassGroup).filter(ClassGroup.id == payload.class_id).first()
         if class_group is None:
@@ -266,7 +274,7 @@ def create_exam_auto(
         raise HTTPException(status_code=400, detail="没有匹配的题目，请调整知识点或难度")
 
     exam = Exam(
-        title=payload.title.strip(),
+        title=_validate_exam_title(payload.title),
         description=payload.description,
         duration_minutes=payload.duration_minutes,
         class_id=payload.class_id,
@@ -333,10 +341,7 @@ def update_exam(
         raise HTTPException(status_code=404, detail="考试不存在")
 
     if payload.title is not None:
-        title = payload.title.strip()
-        if not title:
-            raise HTTPException(status_code=400, detail="考试标题不能为空")
-        exam.title = title
+        exam.title = _validate_exam_title(payload.title)
     if payload.description is not None:
         exam.description = payload.description
     if payload.duration_minutes is not None:

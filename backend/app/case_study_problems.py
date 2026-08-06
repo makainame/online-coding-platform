@@ -19,15 +19,8 @@ CASE_STUDY_PROBLEMS = [
         "difficulty": "medium",
         "tags": "案例检测,学生成绩分析,列表,循环,max,格式化",
         "starter_code": (
-            "n = int(input())\n"
-            "students = []\n"
-            "for _ in range(n):\n"
-            "    name, score = input().split()\n"
-            "    students.append((name, int(score)))\n"
-            "\n"
-            "# 请找出最高分学生，并计算平均分\n"
-            "print()\n"
-            "print()\n"
+            "# 输入第一行为学生人数 n，接下来 n 行每行是 姓名 成绩\n"
+            "# 输出最高分学生的姓名和成绩，以及平均分（保留 1 位小数）\n"
         ),
         "test_cases": [
             {
@@ -62,10 +55,8 @@ CASE_STUDY_PROBLEMS = [
         "difficulty": "medium",
         "tags": "案例检测,文本词频统计,字符串,字典,排序",
         "starter_code": (
-            "words = input().strip().lower().split()\n"
-            "counter = {}\n"
-            "\n"
-            "# 请统计每个单词出现次数，并按字母顺序输出\n"
+            "# 输入一行英文文本，单词之间用空格分隔\n"
+            "# 统计每个单词出现次数，并按字母顺序输出 word:count\n"
         ),
         "test_cases": [
             {
@@ -102,17 +93,8 @@ CASE_STUDY_PROBLEMS = [
         "difficulty": "medium",
         "tags": "案例检测,商品库存管理,列表,循环,条件判断",
         "starter_code": (
-            "n = int(input())\n"
-            "total_value = 0\n"
-            "low_stock = []\n"
-            "for _ in range(n):\n"
-            "    name, stock, price = input().split()\n"
-            "    stock = int(stock)\n"
-            "    price = int(price)\n"
-            "    # 请累计库存总价值，并记录低库存商品\n"
-            "\n"
-            "print(total_value)\n"
-            "print(\" \".join(low_stock) if low_stock else \"none\")\n"
+            "# 输入第一行为商品数量 n，接下来 n 行每行是 商品名 库存量 单价\n"
+            "# 输出库存总价值，以及库存量低于 10 的商品名（没有则输出 none）\n"
         ),
         "test_cases": [
             {
