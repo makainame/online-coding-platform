@@ -4,6 +4,7 @@ import { useRoute } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import api from "../api";
 import CodeEditor from "../components/CodeEditor.vue";
+import { formatRichText } from "../format";
 
 const route = useRoute();
 const exam = ref(null);
@@ -318,7 +319,7 @@ onBeforeUnmount(() => {
             </el-tag>
           </div>
           <h2>{{ currentProblem?.title }}</h2>
-          <div class="description">{{ currentProblem?.description }}</div>
+          <div class="description" v-html="formatRichText(currentProblem?.description)"></div>
         </section>
 
         <section class="work-panel">

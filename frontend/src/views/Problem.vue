@@ -3,6 +3,7 @@ import { onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import api from "../api";
 import CodeEditor from "../components/CodeEditor.vue";
+import { formatRichText } from "../format";
 
 const route = useRoute();
 const problem = ref(null);
@@ -153,7 +154,7 @@ onMounted(loadProblem);
         </el-tag>
       </div>
       <h2>{{ problem.title }}</h2>
-      <div class="description">{{ problem.description }}</div>
+      <div class="description" v-html="formatRichText(problem.description)"></div>
 
       <div v-if="problem.test_cases?.length" class="result-block">
         <h3>示例用例</h3>

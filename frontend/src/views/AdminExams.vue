@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import * as XLSX from "xlsx";
 import api from "../api";
+import { formatRichText } from "../format";
 
 const exams = ref([]);
 const problems = ref([]);
@@ -703,7 +704,7 @@ onMounted(loadAll);
             <template #default="{ row }">
               <div class="preview-detail">
                 <h4>{{ row.title }}</h4>
-                <div class="preview-description">{{ row.description }}</div>
+                <div class="preview-description" v-html="formatRichText(row.description)"></div>
                 <div v-if="row.test_cases?.length" class="case-list">
                   <div
                     v-for="(item, index) in row.test_cases"
