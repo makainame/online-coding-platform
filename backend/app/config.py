@@ -20,6 +20,7 @@ DATABASE_URL = _database_url()
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-change-me")
 TOKEN_TTL_DAYS = int(os.getenv("TOKEN_TTL_DAYS", "7"))
 TEACHER_REGISTER_CODE = os.getenv("TEACHER_REGISTER_CODE", "teacher2026")
+SEED_DEMO_ACCOUNTS = os.getenv("SEED_DEMO_ACCOUNTS", "true").lower() in {"1", "true", "yes"}
 
 AI_PROVIDER = os.getenv("AI_PROVIDER", "local").lower()
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")

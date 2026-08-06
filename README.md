@@ -24,6 +24,8 @@ python -m uvicorn app.main:app --reload --port 8000
 - 学生账号：`student` / `student123`
 - 教师账号：`teacher` / `teacher123`
 
+生产环境设置 `SEED_DEMO_ACCOUNTS=false` 可禁止创建演示账号。
+
 ### 2. 前端
 
 ```bash

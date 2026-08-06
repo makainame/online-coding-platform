@@ -2,6 +2,7 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session
 
+from . import config
 from .advanced_python_problems import ADVANCED_PYTHON_PROBLEMS
 from .case_study_problems import CASE_STUDY_PROBLEMS
 from .cpp_problems import CPP_PROBLEMS
@@ -15,7 +16,7 @@ from .security import hash_password
 
 
 def seed_data(db: Session) -> None:
-    if db.query(User).count() == 0:
+    if config.SEED_DEMO_ACCOUNTS and db.query(User).count() == 0:
         db.add_all(
             [
                 User(
