@@ -3,6 +3,7 @@
 基于 FastAPI + Vue 3 的在线代码练习平台 MVP，支持：
 
 - 学生注册/登录、查看题目、在线编写 Python / JavaScript / Java / C++ 代码
+- 教师按标准阶段模板一键生成 Python 阶段检测卷
 - 运行代码并执行测试用例
 - 提交记录管理
 - AI 反馈（可切换 DeepSeek / Qwen，未配置 Key 时使用本地规则反馈）

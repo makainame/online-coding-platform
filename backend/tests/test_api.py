@@ -690,6 +690,29 @@ def test_teacher_auto_create_exam_by_knowledge_points(client):
     assert updated.json()["problem_count"] >= 1
 
 
+def test_teacher_can_create_standard_stage_exam(client):
+    teacher_headers = login(client, username="teacher", password="teacher123")
+    created = client.post(
+        "/api/admin/exams/stage",
+        headers=teacher_headers,
+        json={
+            "stage": "stage1",
+            "target_count": 10,
+            "duration_minutes": 45,
+            "status": "draft",
+        },
+    )
+    assert created.status_code == 201
+    data = created.json()
+    assert data["title"] == "Python 阶段检测一（Day01-Day03）"
+    assert 5 <= data["problem_count"] <= 10
+
+    titles = [item["title"] for item in data["problems"]]
+    assert len(titles) == len(set(titles))
+    tags = ",".join(item["tags"] for item in data["problems"])
+    assert any(tag in tags for tag in ("Day01", "Day02", "Day03"))
+
+
 def test_student_exam_flow_and_score(client):
     student_headers = login(client)
     problems = client.get("/api/problems", headers=student_headers).json()

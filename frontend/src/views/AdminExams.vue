@@ -21,6 +21,13 @@ const previewData = ref(null);
 const previewLoading = ref(false);
 const editId = ref(null);
 const activeStep = ref(0);
+const stageOptions = [
+  { value: "stage1", label: "Python 阶段一（Day01-Day03）" },
+  { value: "stage2", label: "Python 阶段二（Day04-Day05）" },
+  { value: "stage3", label: "Python 阶段三（Day06-Day08）" },
+  { value: "advanced", label: "Python 进阶综合（进阶Day01-Day08）" },
+  { value: "case", label: "Python 综合案例检测" },
+];
 const form = reactive({
   title: "",
   description: "",
@@ -28,6 +35,8 @@ const form = reactive({
   class_id: null,
   status: "draft",
   selectionMode: "auto",
+  stage: "stage1",
+  target_count: 10,
   problem_ids: [],
   knowledge_points: [],
   count_per_point: 3,
@@ -134,6 +143,8 @@ function resetForm() {
   form.class_id = null;
   form.status = "draft";
   form.selectionMode = "auto";
+  form.stage = "stage1";
+  form.target_count = 10;
   form.problem_ids = [];
   form.knowledge_points = [];
   form.count_per_point = 3;
@@ -171,23 +182,39 @@ async function saveExam() {
   if (!validateTitle()) {
     return;
   }
-  if (form.selectionMode === "auto" && form.problem_ids.length === 0) {
-    ElMessage.error("请先点击自动选题");
-    return;
-  }
-  if (form.problem_ids.length === 0) {
-    ElMessage.error("请至少选择一道题目");
-    return;
+  if (form.selectionMode !== "stage") {
+    if (form.selectionMode === "auto" && form.problem_ids.length === 0) {
+      ElMessage.error("请先点击自动选题");
+      return;
+    }
+    if (form.problem_ids.length === 0) {
+      ElMessage.error("请至少选择一道题目");
+      return;
+    }
   }
   saving.value = true;
   try {
-    const payload = { ...form };
+    const payload =
+      form.selectionMode === "stage"
+        ? {
+            title: form.title,
+            description: form.description,
+            duration_minutes: form.duration_minutes,
+            class_id: form.class_id,
+            status: form.status,
+            stage: form.stage,
+            target_count: form.target_count,
+            language: "python",
+          }
+        : { ...form };
     let savedId = editId.value;
     if (editId.value) {
       await api.put(`/admin/exams/${editId.value}`, payload);
       ElMessage.success("考试已更新");
     } else {
-      const { data } = await api.post("/admin/exams", payload);
+      const path =
+        form.selectionMode === "stage" ? "/admin/exams/stage" : "/admin/exams";
+      const { data } = await api.post(path, payload);
       savedId = data.id;
       ElMessage.success("考试已创建");
     }
@@ -486,6 +513,7 @@ onMounted(loadAll);
       <template v-else>
         <el-form-item label="组卷方式">
           <el-radio-group v-model="form.selectionMode">
+            <el-radio-button value="stage">标准阶段卷</el-radio-button>
             <el-radio-button value="auto">知识点自动组卷</el-radio-button>
             <el-radio-button value="manual">手动选题</el-radio-button>
           </el-radio-group>
@@ -506,6 +534,31 @@ onMounted(loadAll);
               :value="item.id"
             />
           </el-select>
+        </el-form-item>
+
+        <el-form-item v-else-if="form.selectionMode === 'stage'" label="标准阶段卷">
+          <div class="auto-form">
+            <div class="auto-field">
+              <span class="field-label">阶段模板</span>
+              <el-select v-model="form.stage" style="width: 100%">
+                <el-option
+                  v-for="item in stageOptions"
+                  :key="item.value"
+                  :label="item.label"
+                  :value="item.value"
+                />
+              </el-select>
+            </div>
+            <div class="auto-options stage-options">
+              <div class="auto-field">
+                <span class="field-label">目标题数</span>
+                <el-input-number v-model="form.target_count" :min="5" :max="30" />
+              </div>
+            </div>
+          </div>
+          <div class="selected-block">
+            <span class="selected-count">按阶段知识点覆盖，难度比例 60% 基础 / 30% 标准 / 10% 拔高</span>
+          </div>
         </el-form-item>
 
         <el-form-item v-else label="自动组卷">
@@ -695,6 +748,10 @@ onMounted(loadAll);
   grid-template-columns: 150px 130px 130px auto;
   gap: 12px;
   align-items: end;
+}
+
+.stage-options {
+  grid-template-columns: 180px;
 }
 
 .selected-block {

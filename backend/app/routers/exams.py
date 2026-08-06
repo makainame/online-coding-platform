@@ -6,6 +6,7 @@ from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from ..database import get_db
+from ..exam_stages import EXAM_STAGES, select_stage_problem_ids
 from ..models import (
     ClassGroup,
     Exam,
@@ -24,6 +25,7 @@ from ..schemas import (
     ExamOut,
     ExamProblemOut,
     ExamResultOut,
+    ExamStageCreate,
     ExamStartOut,
     ExamSubmitOut,
     ExamUpdate,
@@ -275,6 +277,62 @@ def create_exam_auto(
 
     exam = Exam(
         title=_validate_exam_title(payload.title),
+        description=payload.description,
+        duration_minutes=payload.duration_minutes,
+        class_id=payload.class_id,
+        status=payload.status,
+        created_by=teacher.id,
+    )
+    db.add(exam)
+    db.flush()
+    for index, problem_id in enumerate(problem_ids):
+        db.add(
+            ExamProblem(
+                exam_id=exam.id,
+                problem_id=problem_id,
+                order_index=index,
+            )
+        )
+    db.commit()
+    db.refresh(exam)
+    return _exam_detail(db, exam)
+
+
+@router.post(
+    "/admin/exams/stage",
+    response_model=ExamDetail,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_stage_exam(
+    payload: ExamStageCreate,
+    db: Session = Depends(get_db),
+    teacher: User = Depends(require_teacher),
+) -> ExamDetail:
+    if payload.stage not in EXAM_STAGES:
+        raise HTTPException(status_code=400, detail="阶段模板不存在")
+    if payload.language != "python":
+        raise HTTPException(status_code=400, detail="阶段卷暂只支持 Python 题库")
+
+    problem_ids = select_stage_problem_ids(
+        db,
+        payload.stage,
+        language=payload.language,
+        target_count=payload.target_count,
+    )
+    if not problem_ids:
+        raise HTTPException(status_code=400, detail="当前阶段没有可组卷题目")
+    if payload.class_id is not None:
+        class_group = db.query(ClassGroup).filter(ClassGroup.id == payload.class_id).first()
+        if class_group is None:
+            raise HTTPException(status_code=404, detail="班级不存在")
+
+    title = (
+        _validate_exam_title(payload.title)
+        if payload.title and payload.title.strip()
+        else EXAM_STAGES[payload.stage]["title"]
+    )
+    exam = Exam(
+        title=title,
         description=payload.description,
         duration_minutes=payload.duration_minutes,
         class_id=payload.class_id,

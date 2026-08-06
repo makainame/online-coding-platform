@@ -163,6 +163,23 @@ class ExamAutoPreviewOut(BaseModel):
     problem_ids: list[int]
 
 
+class ExamStageCreate(BaseModel):
+    stage: Literal[
+        "stage1",
+        "stage2",
+        "stage3",
+        "advanced",
+        "case",
+    ]
+    title: Optional[str] = None
+    description: str = ""
+    duration_minutes: int = Field(default=60, ge=1, le=600)
+    class_id: Optional[int] = None
+    status: Literal["draft", "published", "closed"] = "draft"
+    target_count: int = Field(default=10, ge=5, le=30)
+    language: str = "python"
+
+
 class ExamProblemOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
