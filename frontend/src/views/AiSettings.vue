@@ -100,6 +100,8 @@ async function deleteKey() {
   try {
     await ElMessageBox.confirm("确定删除已保存的 API Key？", "删除 Key", {
       type: "warning",
+      confirmButtonText: "确认",
+      cancelButtonText: "取消",
     });
   } catch {
     return;

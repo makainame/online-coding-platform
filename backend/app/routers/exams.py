@@ -131,13 +131,34 @@ def _attach_exam_meta(db: Session, exams: list[Exam]) -> None:
         exam.attempt_count = attempt_counts.get(exam.id, 0)
 
 
+def _exam_description(problem: Problem) -> str:
+    text = (problem.description or "").strip()
+    if "示例" in text:
+        return text
+    samples = [
+        case for case in problem.test_cases if case.is_sample
+    ][:3] or problem.test_cases[:3]
+    if not samples:
+        return text
+
+    lines = [text, ""]
+    for index, case in enumerate(samples, start=1):
+        lines.append(f"示例 {index}：")
+        lines.append("输入：")
+        lines.append(case.input if case.input else "（无输入）")
+        lines.append("输出：")
+        lines.append(case.expected_output)
+        lines.append("")
+    return "\n".join(lines).rstrip()
+
+
 def _exam_problem_out(problem_link: ExamProblem) -> ExamProblemOut:
     problem = problem_link.problem
     return ExamProblemOut(
         id=problem_link.id,
         problem_id=problem.id,
         title=problem.title,
-        description=problem.description,
+        description=_exam_description(problem),
         language=problem.language,
         question_type=problem.question_type,
         score=problem_link.score or problem.score,

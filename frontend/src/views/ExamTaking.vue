@@ -153,6 +153,8 @@ async function submitExam(force = false) {
     try {
       await ElMessageBox.confirm("提交后不能再修改答案，确定交卷吗？", "交卷", {
         type: "warning",
+        confirmButtonText: "确认",
+        cancelButtonText: "取消",
       });
     } catch {
       return;

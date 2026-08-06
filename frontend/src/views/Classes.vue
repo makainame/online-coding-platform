@@ -77,7 +77,11 @@ async function deleteClass(item) {
     await ElMessageBox.confirm(
       `删除“${item.name}”后，该班学生将变为未分班。`,
       "删除班级",
-      { type: "warning" },
+      {
+        type: "warning",
+        confirmButtonText: "确认",
+        cancelButtonText: "取消",
+      },
     );
   } catch {
     return;

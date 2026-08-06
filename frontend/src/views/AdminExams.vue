@@ -274,6 +274,8 @@ async function deleteExam(row) {
   try {
     await ElMessageBox.confirm(`确定删除考试“${row.title}”吗？`, "删除考试", {
       type: "warning",
+      confirmButtonText: "确认",
+      cancelButtonText: "取消",
     });
   } catch {
     return;
