@@ -6,7 +6,7 @@ from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..exam_stages import EXAM_STAGES, select_stage_problem_ids
+from ..exam_stages import EXAM_STAGES, distribute_equal_scores, select_stage_problem_ids
 from ..models import (
     ClassGroup,
     Exam,
@@ -50,21 +50,7 @@ def _validate_exam_title(title: str) -> str:
 
 
 def _distribute_stage_scores(problems: list[Problem]) -> list[int]:
-    base_score = {
-        "easy": 8,
-        "medium": 10,
-        "hard": 12,
-    }
-    raw_scores = [
-        base_score.get(problem.difficulty, 10)
-        for problem in problems
-    ]
-    total_raw = sum(raw_scores) or 1
-    scores = [round(100 * score / total_raw) for score in raw_scores]
-    difference = 100 - sum(scores)
-    if scores:
-        scores[0] += difference
-    return scores
+    return distribute_equal_scores(len(problems))
 
 
 def _class_name_map(db: Session, class_ids: set[int]) -> dict[int, str]:

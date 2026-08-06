@@ -48,6 +48,13 @@ DIFFICULTY_RATIO = {
 }
 
 
+def distribute_equal_scores(count: int) -> list[int]:
+    if count <= 0:
+        return []
+    base, remainder = divmod(100, count)
+    return [base + 1 if index < remainder else base for index in range(count)]
+
+
 def _tag_set(problem: Problem) -> set[str]:
     return {tag.strip() for tag in problem.tags.split(",") if tag.strip()}
 

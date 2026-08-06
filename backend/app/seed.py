@@ -8,6 +8,7 @@ from .case_study_problems import CASE_STUDY_PROBLEMS
 from .cpp_problems import CPP_PROBLEMS
 from .curriculum_problems import CURRICULUM_PROBLEMS
 from .curriculum_problems_extra import CURRICULUM_EXTRA_PROBLEMS
+from .exam_stages import EXAM_STAGES, distribute_equal_scores
 from .java_problems import JAVA_PROBLEMS
 from .javascript_problems import JAVASCRIPT_PROBLEMS
 from .models import Exam, ExamProblem, Problem, TestCase, User
@@ -78,6 +79,7 @@ def seed_data(db: Session) -> None:
     db.commit()
 
     _normalize_problem_meta(db)
+    _normalize_stage_exam_scores(db)
     _seed_case_study_exam(db, teacher)
 
 
@@ -98,6 +100,22 @@ def _normalize_problem_meta(db: Session) -> None:
                 "hard": 20,
             }.get(problem.difficulty, 10)
     db.commit()
+
+
+def _normalize_stage_exam_scores(db: Session) -> None:
+    stage_titles = {stage_config["title"] for stage_config in EXAM_STAGES.values()}
+    exams = (
+        db.query(Exam)
+        .filter(Exam.title.in_(stage_titles))
+        .all()
+    )
+    for exam in exams:
+        problem_links = sorted(exam.problems, key=lambda item: item.order_index)
+        scores = distribute_equal_scores(len(problem_links))
+        for problem_link, score in zip(problem_links, scores):
+            problem_link.score = score
+    if exams:
+        db.commit()
 
 
 def _seed_case_study_exam(db: Session, teacher: User | None) -> None:

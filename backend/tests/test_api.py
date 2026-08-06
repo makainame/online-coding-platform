@@ -707,6 +707,7 @@ def test_teacher_can_create_standard_stage_exam(client):
     assert data["title"] == "Python 阶段检测一（Day01-Day03）"
     assert 5 <= data["problem_count"] <= 10
     assert sum(item["score"] or 0 for item in data["problems"]) == 100
+    assert all((item["score"] or 0) == 10 for item in data["problems"])
     assert any(item["question_type"] for item in data["problems"])
     assert all(
         item["starter_code"].startswith("# 请根据题目要求完成代码")
