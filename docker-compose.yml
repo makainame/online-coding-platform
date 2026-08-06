@@ -21,7 +21,7 @@ services:
       DATABASE_URL: ${DATABASE_URL:-mysql+pymysql://root:rootpassword@mysql:3306/coding_platform}
       SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
       TEACHER_REGISTER_CODE: ${TEACHER_REGISTER_CODE:-teacher2026}
-      SEED_DEMO_ACCOUNTS: ${SEED_DEMO_ACCOUNTS:-true}
+      SEED_DEMO_ACCOUNTS: ${SEED_DEMO_ACCOUNTS:-false}
       AI_PROVIDER: ${AI_PROVIDER:-local}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com/v1}
