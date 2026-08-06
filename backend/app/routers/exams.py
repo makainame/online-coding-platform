@@ -34,7 +34,6 @@ from ..schemas import (
     StudentExamOut,
 )
 from ..security import get_current_user, require_teacher
-from ..starter_codes import get_starter_code
 
 
 router = APIRouter(tags=["exams"])
@@ -145,7 +144,7 @@ def _exam_problem_out(problem_link: ExamProblem) -> ExamProblemOut:
         difficulty=problem.difficulty,
         tags=problem.tags,
         order_index=problem_link.order_index,
-        starter_code=get_starter_code(problem),
+        starter_code=_exam_starter_code(problem),
         test_cases=[
             ExamProblemTestCase(
                 id=case.id,
@@ -156,6 +155,31 @@ def _exam_problem_out(problem_link: ExamProblem) -> ExamProblemOut:
             for case in problem.test_cases
         ],
     )
+
+
+def _exam_starter_code(problem: Problem) -> str:
+    if problem.language == "python":
+        return "# 请根据题目要求完成代码\n"
+    if problem.language == "javascript":
+        return "// 请根据题目要求完成代码\n"
+    if problem.language == "java":
+        return (
+            "public class Main {\n"
+            "    public static void main(String[] args) {\n"
+            "        // 请根据题目要求完成代码\n"
+            "    }\n"
+            "}\n"
+        )
+    if problem.language == "cpp":
+        return (
+            "#include <iostream>\n"
+            "\n"
+            "int main() {\n"
+            "    // 请根据题目要求完成代码\n"
+            "    return 0;\n"
+            "}\n"
+        )
+    return ""
 
 
 def _exam_detail(db: Session, exam: Exam) -> ExamDetail:

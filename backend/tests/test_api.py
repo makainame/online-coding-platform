@@ -708,6 +708,10 @@ def test_teacher_can_create_standard_stage_exam(client):
     assert 5 <= data["problem_count"] <= 10
     assert sum(item["score"] or 0 for item in data["problems"]) == 100
     assert any(item["question_type"] for item in data["problems"])
+    assert all(
+        item["starter_code"].startswith("# 请根据题目要求完成代码")
+        for item in data["problems"]
+    )
 
     titles = [item["title"] for item in data["problems"]]
     assert len(titles) == len(set(titles))

@@ -713,6 +713,7 @@ onMounted(loadAll);
                     <div>预期输出：{{ item.expected_output }}</div>
                   </div>
                 </div>
+                <div class="preview-starter-label">学生作答模板</div>
                 <pre class="preview-code">{{ row.starter_code || "暂无起始代码" }}</pre>
               </div>
             </template>
@@ -844,8 +845,15 @@ onMounted(loadAll);
   white-space: pre-wrap;
 }
 
+.preview-starter-label {
+  margin: 12px 0 6px;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .preview-code {
-  margin: 12px 0 0;
+  margin: 0;
   padding: 12px;
   overflow-x: auto;
   border-radius: 8px;
