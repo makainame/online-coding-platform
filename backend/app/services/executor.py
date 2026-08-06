@@ -659,7 +659,7 @@ def _compile_cpp_local(temp_dir: str, timeout: int) -> str | None:
 def run_cpp_code(
     code: str,
     test_cases: Sequence[TestCase],
-    timeout: int = EXECUTION_TIMEOUT,
+    timeout: int = config.CPP_EXECUTION_TIMEOUT,
 ) -> ExecuteResultOut:
     if config.EXECUTION_MODE == "docker":
         return run_cpp_code_docker(code, test_cases, timeout)
@@ -689,7 +689,7 @@ def run_cpp_code(
 def run_cpp_code_docker(
     code: str,
     test_cases: Sequence[TestCase],
-    timeout: int = EXECUTION_TIMEOUT,
+    timeout: int = config.CPP_EXECUTION_TIMEOUT,
 ) -> ExecuteResultOut:
     temp_dir = tempfile.mkdtemp(prefix="coding_platform_")
     try:
@@ -706,7 +706,7 @@ def run_cpp_code_docker(
 def run_custom_cpp(
     code: str,
     custom_input: str,
-    timeout: int = EXECUTION_TIMEOUT,
+    timeout: int = config.CPP_EXECUTION_TIMEOUT,
 ) -> ExecuteResultOut:
     if config.EXECUTION_MODE == "docker":
         return run_custom_cpp_docker(code, custom_input, timeout)
@@ -744,7 +744,7 @@ def run_custom_cpp(
 def run_custom_cpp_docker(
     code: str,
     custom_input: str,
-    timeout: int = EXECUTION_TIMEOUT,
+    timeout: int = config.CPP_EXECUTION_TIMEOUT,
 ) -> ExecuteResultOut:
     temp_dir = tempfile.mkdtemp(prefix="coding_platform_")
     try:

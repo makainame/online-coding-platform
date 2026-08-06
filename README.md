@@ -88,7 +88,8 @@ QWEN_API_KEY=your_key
 2. 在 `backend/app/services/executor_registry.py` 注册新的执行器
 3. 增加对应语言的测试用例
 
-C++ 沙箱镜像通过 `CPP_RUNNER_IMAGE` 配置，默认使用 `gcc:13-bookworm`。
+C++ 沙箱镜像通过 `CPP_RUNNER_IMAGE` 配置，默认使用 `gcc:13-bookworm`；
+C++ 判题超时可通过 `CPP_EXECUTION_TIMEOUT` 调整，默认 15 秒。
 
 ## 题库导入
 

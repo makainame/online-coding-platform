@@ -30,6 +30,7 @@ QWEN_BASE_URL = os.getenv("QWEN_BASE_URL", "https://dashscope.aliyuncs.com/compa
 QWEN_MODEL = os.getenv("QWEN_MODEL", "qwen3.7-plus")
 
 EXECUTION_TIMEOUT = int(os.getenv("EXECUTION_TIMEOUT", "5"))
+CPP_EXECUTION_TIMEOUT = int(os.getenv("CPP_EXECUTION_TIMEOUT", "15"))
 MAX_OUTPUT_LENGTH = int(os.getenv("MAX_OUTPUT_LENGTH", "10000"))
 EXECUTION_MODE = os.getenv("EXECUTION_MODE", "subprocess").lower()
 PYTHON_RUNNER_IMAGE = os.getenv("PYTHON_RUNNER_IMAGE", "python:3.12-slim")
