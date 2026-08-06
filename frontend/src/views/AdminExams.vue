@@ -557,7 +557,7 @@ onMounted(loadAll);
             </div>
           </div>
           <div class="selected-block">
-            <span class="selected-count">按阶段知识点覆盖，难度比例 60% 基础 / 30% 标准 / 10% 拔高</span>
+            <span class="selected-count">满分 100 分；按阶段知识点覆盖，难度比例 60% 基础 / 30% 标准 / 10% 拔高</span>
           </div>
         </el-form-item>
 
@@ -700,6 +700,10 @@ onMounted(loadAll);
           <el-table-column type="index" label="#" width="72" />
           <el-table-column prop="title" label="题目" min-width="240" />
           <el-table-column prop="language" label="语言" width="120" />
+          <el-table-column prop="question_type" label="题型" width="120" />
+          <el-table-column label="分值" width="80">
+            <template #default="{ row }">{{ row.score ?? "-" }}</template>
+          </el-table-column>
           <el-table-column label="难度" width="110">
             <template #default="{ row }">
               {{ row.difficulty }}

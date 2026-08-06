@@ -76,7 +76,27 @@ def seed_data(db: Session) -> None:
 
     db.commit()
 
+    _normalize_problem_meta(db)
     _seed_case_study_exam(db, teacher)
+
+
+def _normalize_problem_meta(db: Session) -> None:
+    for problem in db.query(Problem).all():
+        tags = {tag.strip() for tag in problem.tags.split(",") if tag.strip()}
+        if "案例检测" in tags:
+            problem.question_type = "案例题"
+        elif tags & {"print", "格式化", "f-string", "转义符", "注释", "输出"}:
+            problem.question_type = "概念/输出题"
+        elif problem.question_type == "编程题":
+            problem.question_type = "编程题"
+
+        if problem.score is None:
+            problem.score = {
+                "easy": 10,
+                "medium": 15,
+                "hard": 20,
+            }.get(problem.difficulty, 10)
+    db.commit()
 
 
 def _seed_case_study_exam(db: Session, teacher: User | None) -> None:

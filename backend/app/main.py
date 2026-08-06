@@ -36,6 +36,22 @@ def ensure_schema() -> None:
                         "ADD COLUMN starter_code TEXT"
                     )
                 )
+        if "question_type" not in columns:
+            with engine.begin() as connection:
+                connection.execute(
+                    text(
+                        "ALTER TABLE problems "
+                        "ADD COLUMN question_type VARCHAR(20) NOT NULL DEFAULT '编程题'"
+                    )
+                )
+        if "score" not in columns:
+            with engine.begin() as connection:
+                connection.execute(
+                    text(
+                        "ALTER TABLE problems "
+                        "ADD COLUMN score INTEGER"
+                    )
+                )
     if "users" in inspector.get_table_names():
         user_columns = [column["name"] for column in inspector.get_columns("users")]
         if "avatar" not in user_columns:
@@ -74,6 +90,18 @@ def ensure_schema() -> None:
                     text(
                         "ALTER TABLE exams "
                         "ADD COLUMN class_id INTEGER"
+                    )
+                )
+    if "exam_problems" in inspector.get_table_names():
+        exam_problem_columns = [
+            column["name"] for column in inspector.get_columns("exam_problems")
+        ]
+        if "score" not in exam_problem_columns:
+            with engine.begin() as connection:
+                connection.execute(
+                    text(
+                        "ALTER TABLE exam_problems "
+                        "ADD COLUMN score INTEGER"
                     )
                 )
 

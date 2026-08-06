@@ -58,6 +58,8 @@ def create_problem(
         title=payload.title,
         description=payload.description,
         language=payload.language,
+        question_type=payload.question_type,
+        score=payload.score,
         starter_code=payload.starter_code,
         difficulty=payload.difficulty,
         tags=payload.tags,
@@ -102,6 +104,8 @@ def import_problems(
             problem.title = item.title
             problem.description = item.description
             problem.language = item.language
+            problem.question_type = item.question_type
+            problem.score = item.score
             problem.starter_code = item.starter_code
             problem.difficulty = item.difficulty
             problem.tags = item.tags
@@ -114,6 +118,8 @@ def import_problems(
                 title=item.title,
                 description=item.description,
                 language=item.language,
+                question_type=item.question_type,
+                score=item.score,
                 starter_code=item.starter_code,
                 difficulty=item.difficulty,
                 tags=item.tags,
@@ -164,7 +170,16 @@ def update_problem(
     problem = db.query(Problem).filter(Problem.id == problem_id).first()
     if problem is None:
         raise HTTPException(status_code=404, detail="题目不存在")
-    for field in ("title", "description", "language", "starter_code", "difficulty", "tags"):
+    for field in (
+        "title",
+        "description",
+        "language",
+        "question_type",
+        "score",
+        "starter_code",
+        "difficulty",
+        "tags",
+    ):
         value = getattr(payload, field)
         if value is not None:
             setattr(problem, field, value)

@@ -49,6 +49,24 @@ def _validate_exam_title(title: str) -> str:
     return stripped
 
 
+def _distribute_stage_scores(problems: list[Problem]) -> list[int]:
+    base_score = {
+        "easy": 8,
+        "medium": 10,
+        "hard": 12,
+    }
+    raw_scores = [
+        base_score.get(problem.difficulty, 10)
+        for problem in problems
+    ]
+    total_raw = sum(raw_scores) or 1
+    scores = [round(100 * score / total_raw) for score in raw_scores]
+    difference = 100 - sum(scores)
+    if scores:
+        scores[0] += difference
+    return scores
+
+
 def _class_name_map(db: Session, class_ids: set[int]) -> dict[int, str]:
     if not class_ids:
         return {}
@@ -120,6 +138,8 @@ def _exam_problem_out(problem_link: ExamProblem) -> ExamProblemOut:
         problem_id=problem.id,
         title=problem.title,
         language=problem.language,
+        question_type=problem.question_type,
+        score=problem_link.score or problem.score,
         difficulty=problem.difficulty,
         tags=problem.tags,
         order_index=problem_link.order_index,
@@ -326,6 +346,15 @@ def create_stage_exam(
         if class_group is None:
             raise HTTPException(status_code=404, detail="班级不存在")
 
+    problem_by_id = {
+        problem.id: problem
+        for problem in db.query(Problem)
+        .filter(Problem.id.in_(problem_ids))
+        .all()
+    }
+    stage_problems = [problem_by_id[problem_id] for problem_id in problem_ids]
+    stage_scores = _distribute_stage_scores(stage_problems)
+
     title = (
         _validate_exam_title(payload.title)
         if payload.title and payload.title.strip()
@@ -341,12 +370,13 @@ def create_stage_exam(
     )
     db.add(exam)
     db.flush()
-    for index, problem_id in enumerate(problem_ids):
+    for index, (problem_id, score) in enumerate(zip(problem_ids, stage_scores)):
         db.add(
             ExamProblem(
                 exam_id=exam.id,
                 problem_id=problem_id,
                 order_index=index,
+                score=score,
             )
         )
     db.commit()
@@ -744,9 +774,18 @@ def submit_exam(
     }
     problem_count = len(exam.problems)
     accepted_problems = len(accepted_problem_ids)
+    total_score = sum(
+        problem_link.score or problem_link.problem.score or 1
+        for problem_link in exam.problems
+    )
+    accepted_score = sum(
+        problem_link.score or problem_link.problem.score or 1
+        for problem_link in exam.problems
+        if problem_link.problem_id in accepted_problem_ids
+    )
     attempt.status = "submitted"
     attempt.submitted_at = datetime.utcnow()
-    attempt.score = round(accepted_problems / problem_count * 100) if problem_count else 0
+    attempt.score = round(accepted_score / total_score * 100) if total_score else 0
     attempt.accepted_problems = accepted_problems
     attempt.total_problems = problem_count
     db.commit()

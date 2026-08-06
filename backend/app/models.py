@@ -83,6 +83,8 @@ class Problem(Base):
     title = Column(String(200), nullable=False)
     description = Column(Text, nullable=False)
     language = Column(String(20), nullable=False, default="python")
+    question_type = Column(String(20), nullable=False, default="编程题")
+    score = Column(Integer, nullable=True)
     starter_code = Column(Text, nullable=True)
     difficulty = Column(String(20), nullable=False, default="easy")
     tags = Column(String(200), nullable=False, default="")
@@ -160,6 +162,7 @@ class ExamProblem(Base):
     exam_id = Column(Integer, ForeignKey("exams.id"), nullable=False, index=True)
     problem_id = Column(Integer, ForeignKey("problems.id"), nullable=False)
     order_index = Column(Integer, nullable=False, default=0)
+    score = Column(Integer, nullable=True)
 
     exam = relationship("Exam", back_populates="problems")
     problem = relationship("Problem")

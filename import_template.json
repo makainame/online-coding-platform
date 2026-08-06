@@ -3,6 +3,8 @@
     "title": "求平方",
     "description": "输入一个整数 n，输出 n 的平方。",
     "language": "python",
+    "question_type": "编程题",
+    "score": 10,
     "difficulty": "easy",
     "tags": "入门,运算",
     "starter_code": "n = int(input())\nprint(n * n)\n",

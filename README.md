@@ -106,6 +106,8 @@ JSON 结构：
     "title": "题目名称",
     "description": "题目描述",
     "language": "python",
+    "question_type": "编程题",
+    "score": 10,
     "difficulty": "easy",
     "tags": "标签1,标签2",
     "starter_code": "起始代码",
@@ -121,6 +123,9 @@ JSON 结构：
 ```
 
 重复导入时，会根据 `title + language` 更新已有题目，不会重复创建。
+
+`question_type` 支持“编程题 / 概念/输出题 / 改错题 / 案例题”，
+`score` 为题目默认分值；标准阶段卷生成时会重新按 100 分分配每道题分值。
 
 ## Ubuntu 24.04 部署
 

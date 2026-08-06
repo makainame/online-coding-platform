@@ -187,6 +187,8 @@ class ExamProblemOut(BaseModel):
     problem_id: int
     title: str
     language: str
+    question_type: str = "编程题"
+    score: Optional[int] = None
     difficulty: str
     tags: str
     order_index: int
@@ -285,6 +287,8 @@ class ProblemCreate(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     description: str
     language: str = "python"
+    question_type: str = "编程题"
+    score: Optional[int] = Field(default=None, ge=1, le=100)
     starter_code: Optional[str] = None
     difficulty: Literal["easy", "medium", "hard"] = "easy"
     tags: str = ""
@@ -295,6 +299,8 @@ class ProblemUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     language: Optional[str] = None
+    question_type: Optional[str] = None
+    score: Optional[int] = Field(default=None, ge=1, le=100)
     starter_code: Optional[str] = None
     difficulty: Optional[Literal["easy", "medium", "hard"]] = None
     tags: Optional[str] = None
@@ -308,6 +314,8 @@ class ProblemOut(BaseModel):
     title: str
     description: str
     language: str = "python"
+    question_type: str = "编程题"
+    score: Optional[int] = None
     starter_code: Optional[str] = ""
     difficulty: str
     tags: str

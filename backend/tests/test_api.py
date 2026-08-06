@@ -706,6 +706,8 @@ def test_teacher_can_create_standard_stage_exam(client):
     data = created.json()
     assert data["title"] == "Python 阶段检测一（Day01-Day03）"
     assert 5 <= data["problem_count"] <= 10
+    assert sum(item["score"] or 0 for item in data["problems"]) == 100
+    assert any(item["question_type"] for item in data["problems"])
 
     titles = [item["title"] for item in data["problems"]]
     assert len(titles) == len(set(titles))
