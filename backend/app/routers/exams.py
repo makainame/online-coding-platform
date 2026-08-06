@@ -29,6 +29,7 @@ from ..schemas import (
     ExamStartOut,
     ExamSubmitOut,
     ExamUpdate,
+    ExamProblemTestCase,
     StudentExamDetail,
     StudentExamOut,
 )
@@ -137,6 +138,7 @@ def _exam_problem_out(problem_link: ExamProblem) -> ExamProblemOut:
         id=problem_link.id,
         problem_id=problem.id,
         title=problem.title,
+        description=problem.description,
         language=problem.language,
         question_type=problem.question_type,
         score=problem_link.score or problem.score,
@@ -144,6 +146,15 @@ def _exam_problem_out(problem_link: ExamProblem) -> ExamProblemOut:
         tags=problem.tags,
         order_index=problem_link.order_index,
         starter_code=get_starter_code(problem),
+        test_cases=[
+            ExamProblemTestCase(
+                id=case.id,
+                input=case.input,
+                expected_output=case.expected_output,
+                is_sample=case.is_sample,
+            )
+            for case in problem.test_cases
+        ],
     )
 
 

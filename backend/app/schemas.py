@@ -180,12 +180,20 @@ class ExamStageCreate(BaseModel):
     language: str = "python"
 
 
+class ExamProblemTestCase(BaseModel):
+    id: int
+    input: str
+    expected_output: str
+    is_sample: bool
+
+
 class ExamProblemOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
     problem_id: int
     title: str
+    description: str = ""
     language: str
     question_type: str = "编程题"
     score: Optional[int] = None
@@ -193,6 +201,7 @@ class ExamProblemOut(BaseModel):
     tags: str
     order_index: int
     starter_code: Optional[str] = ""
+    test_cases: list[ExamProblemTestCase] = []
 
 
 class ExamOut(BaseModel):

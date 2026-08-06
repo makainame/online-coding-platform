@@ -697,6 +697,26 @@ onMounted(loadAll);
           </div>
         </div>
         <el-table :data="previewData.problems" row-key="problem_id">
+          <el-table-column type="expand">
+            <template #default="{ row }">
+              <div class="preview-detail">
+                <h4>{{ row.title }}</h4>
+                <div class="preview-description">{{ row.description }}</div>
+                <div v-if="row.test_cases?.length" class="case-list">
+                  <div
+                    v-for="(item, index) in row.test_cases"
+                    :key="item.id"
+                    class="case-item"
+                  >
+                    <div>示例 {{ index + 1 }}</div>
+                    <div>输入：{{ item.input }}</div>
+                    <div>预期输出：{{ item.expected_output }}</div>
+                  </div>
+                </div>
+                <pre class="preview-code">{{ row.starter_code || "暂无起始代码" }}</pre>
+              </div>
+            </template>
+          </el-table-column>
           <el-table-column type="index" label="#" width="72" />
           <el-table-column prop="title" label="题目" min-width="240" />
           <el-table-column prop="language" label="语言" width="120" />
@@ -807,5 +827,33 @@ onMounted(loadAll);
   gap: 10px;
   color: #64748b;
   white-space: nowrap;
+}
+
+.preview-detail {
+  padding: 4px 18px 18px 72px;
+}
+
+.preview-detail h4 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.preview-description {
+  margin-bottom: 12px;
+  color: #334155;
+  white-space: pre-wrap;
+}
+
+.preview-code {
+  margin: 12px 0 0;
+  padding: 12px;
+  overflow-x: auto;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #1f2937;
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.55;
 }
 </style>
