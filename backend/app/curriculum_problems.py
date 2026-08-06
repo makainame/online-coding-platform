@@ -192,8 +192,8 @@ print(s[::-1])
             ("python", "PYTHON\n0"),
         ],
         """s = input().strip()
-print(s.upper())
-print(s.count("a"))
+# 输出转大写后的结果
+# 输出其中字母 a 出现的次数
 """,
     ),
     _cp(
