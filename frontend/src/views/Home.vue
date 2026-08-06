@@ -8,7 +8,7 @@ const problems = ref([]);
 const loading = ref(false);
 const keyword = ref("");
 const difficulty = ref("");
-const expandedLanguages = ref(["python"]);
+const expandedLanguages = ref(["python", "javascript", "java", "cpp"]);
 
 const languageLabel = {
   python: "Python",
@@ -34,6 +34,8 @@ const difficultyRank = {
   medium: 2,
   hard: 3,
 };
+
+const hasToken = computed(() => Boolean(localStorage.getItem("token")));
 
 function teachingRank(tags) {
   const dayTag = tags.split(",").find((tag) => /^(进阶)?Day\d+$/.test(tag));
@@ -77,6 +79,7 @@ const languages = computed(() => {
 });
 
 async function loadProblems() {
+  if (!hasToken.value) return;
   loading.value = true;
   try {
     const { data } = await api.get("/problems");
@@ -88,6 +91,11 @@ async function loadProblems() {
 
 function openProblem(id) {
   router.push(`/problem/${id}`);
+}
+
+function clearFilters() {
+  keyword.value = "";
+  difficulty.value = "";
 }
 
 onMounted(loadProblems);
@@ -159,7 +167,26 @@ onMounted(loadProblems);
         </el-collapse-item>
       </el-collapse>
       <div v-if="!loading && filtered.length === 0" class="empty-state">
-        暂无匹配题目
+        <svg
+          class="empty-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="11" cy="11" r="7" />
+          <line x1="16.5" y1="16.5" x2="21" y2="21" />
+        </svg>
+        <p>{{ hasToken ? "暂无匹配题目" : "登录后查看题库" }}</p>
+        <p v-if="hasToken" class="empty-hint">换个关键词或难度试试</p>
+        <el-button
+          v-if="hasToken && (keyword || difficulty)"
+          @click="clearFilters"
+        >
+          清除筛选
+        </el-button>
       </div>
     </div>
   </section>
@@ -200,17 +227,29 @@ onMounted(loadProblems);
 }
 
 .language-badge {
-  padding: 3px 9px;
-  border-radius: 6px;
-  background: #176b5b;
-  color: #ffffff;
-  font-size: 12px;
+  padding: 0;
+  background: transparent;
+  color: #334155;
+  font-size: 14px;
   font-weight: 700;
 }
 
 .language-count {
   color: #64748b;
   font-size: 12px;
+}
+
+.empty-icon {
+  width: 42px;
+  height: 42px;
+  margin-bottom: 8px;
+  color: #94a3b8;
+}
+
+.empty-hint {
+  margin: 6px 0 0;
+  color: #94a3b8;
+  font-size: 13px;
 }
 
 :deep(.el-table__row) {

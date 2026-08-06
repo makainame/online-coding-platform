@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from . import models  # noqa: F401
 from .config import BASE_DIR
 from .database import Base, engine, get_db
-from .routers import ai_settings, auth, drafts, feedback, problems, statistics, students, submissions
+from .routers import ai_settings, auth, classes, drafts, exams, feedback, problems, statistics, students, submissions
 from .seed import seed_data
 
 
@@ -46,6 +46,36 @@ def ensure_schema() -> None:
                         "ADD COLUMN avatar VARCHAR(500)"
                     )
                 )
+        if "class_id" not in user_columns:
+            with engine.begin() as connection:
+                connection.execute(
+                    text(
+                        "ALTER TABLE users "
+                        "ADD COLUMN class_id INTEGER"
+                    )
+                )
+    if "submissions" in inspector.get_table_names():
+        submission_columns = [
+            column["name"] for column in inspector.get_columns("submissions")
+        ]
+        if "exam_id" not in submission_columns:
+            with engine.begin() as connection:
+                connection.execute(
+                    text(
+                        "ALTER TABLE submissions "
+                        "ADD COLUMN exam_id INTEGER"
+                    )
+                )
+    if "exams" in inspector.get_table_names():
+        exam_columns = [column["name"] for column in inspector.get_columns("exams")]
+        if "class_id" not in exam_columns:
+            with engine.begin() as connection:
+                connection.execute(
+                    text(
+                        "ALTER TABLE exams "
+                        "ADD COLUMN class_id INTEGER"
+                    )
+                )
 
 
 ensure_schema()
@@ -70,6 +100,8 @@ app.include_router(submissions.router, prefix="/api")
 app.include_router(feedback.router, prefix="/api")
 app.include_router(statistics.router, prefix="/api")
 app.include_router(students.router, prefix="/api")
+app.include_router(classes.router, prefix="/api")
+app.include_router(exams.router, prefix="/api")
 app.include_router(ai_settings.router, prefix="/api")
 app.include_router(drafts.router, prefix="/api")
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")

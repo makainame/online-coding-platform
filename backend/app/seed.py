@@ -3,9 +3,13 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from .advanced_python_problems import ADVANCED_PYTHON_PROBLEMS
+from .case_study_problems import CASE_STUDY_PROBLEMS
+from .cpp_problems import CPP_PROBLEMS
 from .curriculum_problems import CURRICULUM_PROBLEMS
 from .curriculum_problems_extra import CURRICULUM_EXTRA_PROBLEMS
-from .models import Problem, TestCase, User
+from .java_problems import JAVA_PROBLEMS
+from .javascript_problems import JAVASCRIPT_PROBLEMS
+from .models import Exam, ExamProblem, Problem, TestCase, User
 from .sample_problems import PYTHON_PROBLEMS
 from .security import hash_password
 
@@ -38,6 +42,10 @@ def seed_data(db: Session) -> None:
         *ADVANCED_PYTHON_PROBLEMS,
         *CURRICULUM_PROBLEMS,
         *CURRICULUM_EXTRA_PROBLEMS,
+        *CASE_STUDY_PROBLEMS,
+        *JAVASCRIPT_PROBLEMS,
+        *JAVA_PROBLEMS,
+        *CPP_PROBLEMS,
     ]:
         if item["title"] in existing_titles:
             continue
@@ -48,6 +56,7 @@ def seed_data(db: Session) -> None:
             language=item.get("language", "python"),
             difficulty=item["difficulty"],
             tags=item["tags"],
+            starter_code=item.get("starter_code"),
             created_by=teacher.id if teacher else None,
             created_at=datetime.utcnow(),
         )
@@ -65,4 +74,54 @@ def seed_data(db: Session) -> None:
             )
         existing_titles.add(item["title"])
 
+    db.commit()
+
+    _seed_case_study_exam(db, teacher)
+
+
+def _seed_case_study_exam(db: Session, teacher: User | None) -> None:
+    if teacher is None:
+        return
+    existing = (
+        db.query(Exam)
+        .filter(
+            Exam.title == "Python 案例检测卷",
+            Exam.created_by == teacher.id,
+        )
+        .first()
+    )
+    if existing is not None:
+        return
+
+    titles = [item["title"] for item in CASE_STUDY_PROBLEMS]
+    problems = (
+        db.query(Problem)
+        .filter(
+            Problem.title.in_(titles),
+            Problem.language == "python",
+        )
+        .order_by(Problem.id)
+        .all()
+    )
+    if len(problems) < len(titles):
+        return
+
+    exam = Exam(
+        title="Python 案例检测卷",
+        description="包含学生成绩分析、文本词频统计、商品库存管理三道综合案例题。",
+        duration_minutes=60,
+        class_id=None,
+        status="draft",
+        created_by=teacher.id,
+    )
+    db.add(exam)
+    db.flush()
+    for index, problem in enumerate(problems):
+        db.add(
+            ExamProblem(
+                exam_id=exam.id,
+                problem_id=problem.id,
+                order_index=index,
+            )
+        )
     db.commit()

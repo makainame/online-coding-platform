@@ -185,6 +185,9 @@ onMounted(loadStudents);
       <el-table v-loading="loading" :data="students" row-key="id">
         <el-table-column prop="id" label="#" width="80" />
         <el-table-column prop="username" label="用户名" min-width="140" />
+        <el-table-column prop="class_name" label="班级" min-width="120">
+          <template #default="{ row }">{{ row.class_name || "未分班" }}</template>
+        </el-table-column>
         <el-table-column prop="email" label="邮箱" min-width="200" />
         <el-table-column label="创建时间" min-width="180">
           <template #default="{ row }">{{ formatTime(row.created_at) }}</template>

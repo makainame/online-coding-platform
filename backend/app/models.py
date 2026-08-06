@@ -6,6 +6,21 @@ from sqlalchemy.orm import relationship
 from .database import Base
 
 
+class ClassGroup(Base):
+    __tablename__ = "class_groups"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), unique=True, nullable=False, index=True)
+    teacher_id = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    students = relationship(
+        "User",
+        back_populates="class_group",
+        foreign_keys="User.class_id",
+    )
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -13,9 +28,16 @@ class User(Base):
     username = Column(String(50), unique=True, index=True, nullable=False)
     email = Column(String(100), unique=True, nullable=True)
     avatar = Column(String(500), nullable=True)
+    class_id = Column(Integer, ForeignKey("class_groups.id"), nullable=True, index=True)
     password_hash = Column(String(255), nullable=False)
     role = Column(String(20), nullable=False, default="student")
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    class_group = relationship(
+        "ClassGroup",
+        back_populates="students",
+        foreign_keys=[class_id],
+    )
 
 
 class AiSetting(Base):
@@ -93,6 +115,7 @@ class Submission(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     problem_id = Column(Integer, ForeignKey("problems.id"), nullable=False)
+    exam_id = Column(Integer, ForeignKey("exams.id"), nullable=True, index=True)
     code = Column(Text, nullable=False)
     language = Column(String(20), nullable=False, default="python")
     status = Column(String(20), nullable=False, default="pending")
@@ -100,6 +123,66 @@ class Submission(Base):
     actual_output = Column(Text, nullable=True)
     error_message = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class Exam(Base):
+    __tablename__ = "exams"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(200), nullable=False)
+    description = Column(Text, nullable=False, default="")
+    duration_minutes = Column(Integer, nullable=False, default=60)
+    class_id = Column(Integer, ForeignKey("class_groups.id"), nullable=True, index=True)
+    status = Column(String(20), nullable=False, default="draft")
+    created_by = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    problems = relationship(
+        "ExamProblem",
+        cascade="all, delete-orphan",
+        back_populates="exam",
+        order_by="ExamProblem.order_index",
+    )
+    attempts = relationship(
+        "ExamAttempt",
+        cascade="all, delete-orphan",
+        back_populates="exam",
+    )
+
+
+class ExamProblem(Base):
+    __tablename__ = "exam_problems"
+    __table_args__ = (
+        UniqueConstraint("exam_id", "problem_id", name="uq_exam_problem"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    exam_id = Column(Integer, ForeignKey("exams.id"), nullable=False, index=True)
+    problem_id = Column(Integer, ForeignKey("problems.id"), nullable=False)
+    order_index = Column(Integer, nullable=False, default=0)
+
+    exam = relationship("Exam", back_populates="problems")
+    problem = relationship("Problem")
+
+
+class ExamAttempt(Base):
+    __tablename__ = "exam_attempts"
+    __table_args__ = (
+        UniqueConstraint("exam_id", "user_id", name="uq_exam_user"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    exam_id = Column(Integer, ForeignKey("exams.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    started_at = Column(DateTime, default=datetime.utcnow)
+    submitted_at = Column(DateTime, nullable=True)
+    status = Column(String(20), nullable=False, default="in_progress")
+    score = Column(Integer, nullable=True)
+    total_problems = Column(Integer, nullable=False, default=0)
+    accepted_problems = Column(Integer, nullable=False, default=0)
+
+    exam = relationship("Exam", back_populates="attempts")
+    user = relationship("User")
 
 
 class Feedback(Base):

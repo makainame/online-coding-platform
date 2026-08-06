@@ -56,6 +56,8 @@ class PasswordReset(BaseModel):
 class StudentOut(UserOut):
     submission_count: int = 0
     accepted_count: int = 0
+    class_id: Optional[int] = None
+    class_name: str = ""
     created_at: object
 
 
@@ -63,6 +65,8 @@ class AdminStudentStatOut(BaseModel):
     user_id: int
     username: str
     email: Optional[str] = None
+    class_id: Optional[int] = None
+    class_name: str = ""
     submission_count: int
     accepted_count: int
     pass_rate: float
@@ -77,6 +81,169 @@ class AdminStatsOut(BaseModel):
     pass_rate: float
     students: list[AdminStudentStatOut]
     daily: list[DailyStatOut] = []
+
+
+class ScoreExportProblem(BaseModel):
+    problem_id: int
+    title: str
+    language: str
+
+
+class StudentScoreExportRow(BaseModel):
+    username: str
+    email: Optional[str] = None
+    class_id: Optional[int] = None
+    class_name: str = ""
+    submission_count: int
+    accepted_count: int
+    pass_rate: float
+    problem_statuses: dict[str, str]
+
+
+class ScoreExportOut(BaseModel):
+    problems: list[ScoreExportProblem]
+    rows: list[StudentScoreExportRow]
+
+
+class ClassGroupCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+
+
+class ClassGroupUpdate(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=100)
+
+
+class ClassGroupOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    teacher_id: Optional[int] = None
+    created_at: object
+    student_count: int = 0
+
+
+class StudentClassUpdate(BaseModel):
+    class_id: Optional[int] = None
+
+
+class ExamCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    description: str = ""
+    duration_minutes: int = Field(default=60, ge=1, le=600)
+    class_id: Optional[int] = None
+    problem_ids: list[int] = []
+    status: Literal["draft", "published", "closed"] = "draft"
+
+
+class ExamUpdate(BaseModel):
+    title: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    description: Optional[str] = None
+    duration_minutes: Optional[int] = Field(default=None, ge=1, le=600)
+    class_id: Optional[int] = None
+    problem_ids: Optional[list[int]] = None
+    status: Optional[Literal["draft", "published", "closed"]] = None
+
+
+class ExamAutoCreate(ExamCreate):
+    knowledge_points: list[str] = []
+    count_per_point: int = Field(default=3, ge=1, le=30)
+    difficulty: Literal["easy", "medium", "hard", "all"] = "all"
+    language: Literal["python", "javascript", "java", "cpp"] = "python"
+
+
+class ExamAutoUpdate(BaseModel):
+    knowledge_points: list[str] = []
+    count_per_point: int = Field(default=3, ge=1, le=30)
+    difficulty: Literal["easy", "medium", "hard", "all"] = "all"
+    language: Literal["python", "javascript", "java", "cpp"] = "python"
+
+
+class ExamAutoPreviewOut(BaseModel):
+    problem_ids: list[int]
+
+
+class ExamProblemOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    problem_id: int
+    title: str
+    language: str
+    difficulty: str
+    tags: str
+    order_index: int
+    starter_code: Optional[str] = ""
+
+
+class ExamOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    title: str
+    description: str
+    duration_minutes: int
+    class_id: Optional[int] = None
+    class_name: str = ""
+    status: str
+    created_at: object
+    problem_count: int = 0
+    attempt_count: int = 0
+
+
+class ExamDetail(ExamOut):
+    problems: list[ExamProblemOut] = []
+
+
+class StudentExamOut(BaseModel):
+    id: int
+    title: str
+    description: str
+    duration_minutes: int
+    class_name: str = ""
+    status: str
+    attempt_status: str = ""
+    score: Optional[int] = None
+    accepted_problems: int = 0
+    total_problems: int = 0
+
+
+class StudentExamDetail(ExamDetail):
+    attempt_status: str = ""
+    score: Optional[int] = None
+    accepted_problems: int = 0
+    total_problems: int = 0
+    started_at: object = None
+    submitted_at: object = None
+    results: dict[str, str] = {}
+
+
+class ExamStartOut(BaseModel):
+    attempt_id: int
+    status: str
+    started_at: object
+
+
+class ExamSubmitOut(BaseModel):
+    status: str
+    score: int
+    total_problems: int
+    accepted_problems: int
+    submitted_at: object
+
+
+class ExamResultOut(BaseModel):
+    user_id: int
+    username: str
+    email: Optional[str] = None
+    class_name: str = ""
+    status: str
+    score: Optional[int] = None
+    total_problems: int
+    accepted_problems: int
+    started_at: object
+    submitted_at: object = None
+    problem_statuses: dict[str, str] = {}
 
 
 class AuthResponse(BaseModel):
@@ -152,6 +319,7 @@ class SubmissionCreate(BaseModel):
     problem_id: int
     code: str
     language: str = "python"
+    exam_id: Optional[int] = None
 
 
 class TestResultOut(BaseModel):
@@ -176,6 +344,7 @@ class SubmissionOut(BaseModel):
     id: int
     user_id: int
     problem_id: int
+    exam_id: Optional[int] = None
     code: str
     language: str
     status: str

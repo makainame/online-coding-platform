@@ -173,6 +173,74 @@ def test_student_full_flow(client):
     assert feedback_data["score"] == 95.0
 
 
+def test_javascript_problem_is_seeded_with_starter_code(client):
+    headers = login(client)
+    problems = client.get("/api/problems", headers=headers).json()
+    js_problem = next(
+        item
+        for item in problems
+        if item["title"] == "JavaScript 两数之和"
+    )
+
+    detail = client.get(f"/api/problems/{js_problem['id']}", headers=headers)
+    assert detail.status_code == 200
+    data = detail.json()
+    assert data["language"] == "javascript"
+    assert "readFileSync" in data["starter_code"]
+
+
+def test_java_problem_is_seeded_with_starter_code(client):
+    headers = login(client)
+    problems = client.get("/api/problems", headers=headers).json()
+    java_problem = next(
+        item
+        for item in problems
+        if item["title"] == "Java 两数之和"
+    )
+
+    detail = client.get(f"/api/problems/{java_problem['id']}", headers=headers)
+    assert detail.status_code == 200
+    data = detail.json()
+    assert data["language"] == "java"
+    assert "public class Main" in data["starter_code"]
+
+
+def test_cpp_problem_is_seeded_with_starter_code(client):
+    headers = login(client)
+    problems = client.get("/api/problems", headers=headers).json()
+    cpp_problem = next(
+        item
+        for item in problems
+        if item["title"] == "C++ 两数之和"
+    )
+
+    detail = client.get(f"/api/problems/{cpp_problem['id']}", headers=headers)
+    assert detail.status_code == 200
+    data = detail.json()
+    assert data["language"] == "cpp"
+    assert "#include <iostream>" in data["starter_code"]
+
+
+def test_case_study_paper_is_seeded(client):
+    teacher_headers = login(client, username="teacher", password="teacher123")
+    problems = client.get("/api/problems", headers=teacher_headers).json()
+    case_titles = {
+        "案例：学生成绩分析",
+        "案例：文本词频统计",
+        "案例：商品库存管理",
+    }
+    assert case_titles.issubset({item["title"] for item in problems})
+
+    exams = client.get("/api/admin/exams", headers=teacher_headers).json()
+    paper = next(
+        item
+        for item in exams
+        if item["title"] == "Python 案例检测卷"
+    )
+    assert paper["status"] == "draft"
+    assert paper["problem_count"] == 3
+
+
 def test_wrong_answer_status(client):
     headers = login(client)
     problems = client.get("/api/problems", headers=headers).json()
@@ -398,6 +466,372 @@ def test_teacher_import_students(client):
     assert repeated.json()["skipped"] == 2
 
 
+def test_teacher_class_management_and_assignment(client):
+    teacher_headers = login(client, username="teacher", password="teacher123")
+    created = client.post(
+        "/api/admin/classes",
+        headers=teacher_headers,
+        json={"name": "Python 一班"},
+    )
+    assert created.status_code == 201
+    class_id = created.json()["id"]
+
+    duplicate = client.post(
+        "/api/admin/classes",
+        headers=teacher_headers,
+        json={"name": "Python 一班"},
+    )
+    assert duplicate.status_code == 400
+
+    student = client.post(
+        "/api/admin/students",
+        headers=teacher_headers,
+        json={
+            "username": "class_student",
+            "password": "class123456",
+            "email": "class@example.com",
+        },
+    )
+    assert student.status_code == 201
+    student_id = student.json()["id"]
+
+    assigned = client.put(
+        f"/api/admin/students/{student_id}/class",
+        headers=teacher_headers,
+        json={"class_id": class_id},
+    )
+    assert assigned.status_code == 200
+    assert assigned.json()["class_name"] == "Python 一班"
+
+    classes = client.get("/api/admin/classes", headers=teacher_headers)
+    assert classes.status_code == 200
+    class_row = next(item for item in classes.json() if item["id"] == class_id)
+    assert class_row["student_count"] == 1
+
+    students = client.get("/api/admin/students", headers=teacher_headers)
+    student_row = next(
+        item for item in students.json() if item["id"] == student_id
+    )
+    assert student_row["class_id"] == class_id
+    assert student_row["class_name"] == "Python 一班"
+
+    renamed = client.put(
+        f"/api/admin/classes/{class_id}",
+        headers=teacher_headers,
+        json={"name": "Python 二班"},
+    )
+    assert renamed.status_code == 200
+    assert renamed.json()["name"] == "Python 二班"
+
+    deleted = client.delete(
+        f"/api/admin/classes/{class_id}",
+        headers=teacher_headers,
+    )
+    assert deleted.status_code == 204
+
+    students_after_delete = client.get(
+        "/api/admin/students",
+        headers=teacher_headers,
+    )
+    student_after_delete = next(
+        item for item in students_after_delete.json() if item["id"] == student_id
+    )
+    assert student_after_delete["class_id"] is None
+
+
+def test_teacher_class_appears_in_stats_and_export(client):
+    teacher_headers = login(client, username="teacher", password="teacher123")
+    class_group = client.post(
+        "/api/admin/classes",
+        headers=teacher_headers,
+        json={"name": "统计一班"},
+    ).json()
+    student = client.post(
+        "/api/admin/students",
+        headers=teacher_headers,
+        json={
+            "username": "stats_student",
+            "password": "stats123456",
+            "email": "stats@example.com",
+        },
+    ).json()
+    client.put(
+        f"/api/admin/students/{student['id']}/class",
+        headers=teacher_headers,
+        json={"class_id": class_group["id"]},
+    )
+
+    stats = client.get("/api/admin/statistics", headers=teacher_headers)
+    assert stats.status_code == 200
+    stats_row = next(
+        item
+        for item in stats.json()["students"]
+        if item["username"] == "stats_student"
+    )
+    assert stats_row["class_name"] == "统计一班"
+
+    exported = client.get("/api/admin/statistics/export", headers=teacher_headers)
+    assert exported.status_code == 200
+    export_row = next(
+        item
+        for item in exported.json()["rows"]
+        if item["username"] == "stats_student"
+    )
+    assert export_row["class_name"] == "统计一班"
+
+
+def test_student_cannot_manage_classes(client):
+    headers = login(client)
+    response = client.get("/api/admin/classes", headers=headers)
+    assert response.status_code == 403
+
+
+def test_teacher_can_create_update_and_delete_exam(client):
+    teacher_headers = login(client, username="teacher", password="teacher123")
+    problems = client.get("/api/problems", headers=teacher_headers).json()
+    problem_ids = [item["id"] for item in problems[:3]]
+
+    created = client.post(
+        "/api/admin/exams",
+        headers=teacher_headers,
+        json={
+            "title": "Python 阶段测试",
+            "description": "第一阶段考试",
+            "duration_minutes": 60,
+            "status": "published",
+            "problem_ids": problem_ids,
+        },
+    )
+    assert created.status_code == 201
+    exam_id = created.json()["id"]
+    assert created.json()["problem_count"] == 3
+
+    detail = client.get(
+        f"/api/admin/exams/{exam_id}",
+        headers=teacher_headers,
+    )
+    assert detail.status_code == 200
+    assert len(detail.json()["problems"]) == 3
+
+    updated = client.put(
+        f"/api/admin/exams/{exam_id}",
+        headers=teacher_headers,
+        json={
+            "title": "Python 阶段测试改",
+            "problem_ids": problem_ids[:2],
+        },
+    )
+    assert updated.status_code == 200
+    assert updated.json()["title"] == "Python 阶段测试改"
+    assert updated.json()["problem_count"] == 2
+
+    deleted = client.delete(
+        f"/api/admin/exams/{exam_id}",
+        headers=teacher_headers,
+    )
+    assert deleted.status_code == 204
+
+
+def test_teacher_auto_create_exam_by_knowledge_points(client):
+    teacher_headers = login(client, username="teacher", password="teacher123")
+    created = client.post(
+        "/api/admin/exams/auto",
+        headers=teacher_headers,
+        json={
+            "title": "Python 知识点自动卷",
+            "description": "按知识点自动组卷",
+            "duration_minutes": 40,
+            "status": "draft",
+            "knowledge_points": ["Day01", "字符串"],
+            "count_per_point": 2,
+            "difficulty": "easy",
+            "language": "python",
+        },
+    )
+    assert created.status_code == 201
+    exam_id = created.json()["id"]
+    assert 1 <= created.json()["problem_count"] <= 4
+    assert all(
+        item["language"] == "python"
+        for item in created.json()["problems"]
+    )
+
+    updated = client.put(
+        f"/api/admin/exams/{exam_id}/auto-select",
+        headers=teacher_headers,
+        json={
+            "knowledge_points": ["列表"],
+            "count_per_point": 2,
+            "difficulty": "easy",
+            "language": "python",
+        },
+    )
+    assert updated.status_code == 200
+    assert updated.json()["problem_count"] >= 1
+
+
+def test_student_exam_flow_and_score(client):
+    student_headers = login(client)
+    problems = client.get("/api/problems", headers=student_headers).json()
+    problem = next(item for item in problems if item["title"] == "两数之和")
+
+    teacher_headers = login(client, username="teacher", password="teacher123")
+    exam = client.post(
+        "/api/admin/exams",
+        headers=teacher_headers,
+        json={
+            "title": "学生考试流程",
+            "description": "流程验证",
+            "duration_minutes": 30,
+            "status": "published",
+            "problem_ids": [problem["id"]],
+        },
+    ).json()
+
+    started = client.post(
+        f"/api/exams/{exam['id']}/start",
+        headers=student_headers,
+    )
+    assert started.status_code == 200
+    assert started.json()["status"] == "in_progress"
+
+    submitted = client.post(
+        "/api/submissions",
+        headers=student_headers,
+        json={
+            "problem_id": problem["id"],
+            "code": "a, b = map(int, input().split())\nprint(a + b)",
+            "language": "python",
+            "exam_id": exam["id"],
+        },
+    )
+    assert submitted.status_code == 201
+    assert submitted.json()["status"] == "accepted"
+    assert submitted.json()["exam_id"] == exam["id"]
+
+    finished = client.post(
+        f"/api/exams/{exam['id']}/submit",
+        headers=student_headers,
+    )
+    assert finished.status_code == 200
+    assert finished.json()["score"] == 100
+    assert finished.json()["accepted_problems"] == 1
+    assert finished.json()["total_problems"] == 1
+
+    detail = client.get(
+        f"/api/exams/{exam['id']}",
+        headers=student_headers,
+    )
+    assert detail.status_code == 200
+    assert detail.json()["attempt_status"] == "submitted"
+    assert detail.json()["results"][str(problem["id"])] == "accepted"
+
+    results = client.get(
+        f"/api/admin/exams/{exam['id']}/results",
+        headers=teacher_headers,
+    )
+    assert results.status_code == 200
+    assert results.json()[0]["username"] == "student"
+    assert results.json()[0]["score"] == 100
+    assert results.json()[0]["problem_statuses"][str(problem["id"])] == "accepted"
+
+    exported = client.get(
+        f"/api/admin/exams/{exam['id']}/results/export",
+        headers=teacher_headers,
+    )
+    assert exported.status_code == 200
+    assert exported.json()[0]["problem_statuses"][str(problem["id"])] == "accepted"
+
+
+def test_student_exam_submission_requires_start(client):
+    student_headers = login(client)
+    problems = client.get("/api/problems", headers=student_headers).json()
+    problem = next(item for item in problems if item["title"] == "两数之和")
+    teacher_headers = login(client, username="teacher", password="teacher123")
+    exam = client.post(
+        "/api/admin/exams",
+        headers=teacher_headers,
+        json={
+            "title": "未开始考试",
+            "description": "未开始",
+            "duration_minutes": 30,
+            "status": "published",
+            "problem_ids": [problem["id"]],
+        },
+    ).json()
+
+    response = client.post(
+        "/api/submissions",
+        headers=student_headers,
+        json={
+            "problem_id": problem["id"],
+            "code": "print(1)",
+            "language": "python",
+            "exam_id": exam["id"],
+        },
+    )
+    assert response.status_code == 400
+
+
+def test_exam_published_by_class_only_reaches_that_class(client):
+    teacher_headers = login(client, username="teacher", password="teacher123")
+    class_group = client.post(
+        "/api/admin/classes",
+        headers=teacher_headers,
+        json={"name": "考试一班"},
+    ).json()
+    inside_student = client.post(
+        "/api/admin/students",
+        headers=teacher_headers,
+        json={
+            "username": "inside_student",
+            "password": "inside123456",
+            "email": "inside@example.com",
+        },
+    ).json()
+    client.put(
+        f"/api/admin/students/{inside_student['id']}/class",
+        headers=teacher_headers,
+        json={"class_id": class_group["id"]},
+    )
+    outside_student = client.post(
+        "/api/admin/students",
+        headers=teacher_headers,
+        json={
+            "username": "outside_student",
+            "password": "outside123456",
+            "email": "outside@example.com",
+        },
+    ).json()
+    problems = client.get("/api/problems", headers=teacher_headers).json()
+    problem = next(item for item in problems if item["title"] == "两数之和")
+    exam = client.post(
+        "/api/admin/exams",
+        headers=teacher_headers,
+        json={
+            "title": "一班专项考试",
+            "description": "按班发布",
+            "duration_minutes": 30,
+            "class_id": class_group["id"],
+            "status": "published",
+            "problem_ids": [problem["id"]],
+        },
+    ).json()
+
+    inside_headers = login(client, "inside_student", "inside123456")
+    inside_exams = client.get("/api/exams", headers=inside_headers).json()
+    assert any(item["id"] == exam["id"] for item in inside_exams)
+
+    outside_headers = login(client, "outside_student", "outside123456")
+    outside_exams = client.get("/api/exams", headers=outside_headers).json()
+    assert not any(item["id"] == exam["id"] for item in outside_exams)
+    forbidden = client.get(
+        f"/api/exams/{exam['id']}",
+        headers=outside_headers,
+    )
+    assert forbidden.status_code == 403
+
+
 def test_teacher_admin_statistics(client):
     student_headers = login(client)
     problems = client.get("/api/problems", headers=student_headers).json()
@@ -417,6 +851,42 @@ def test_teacher_admin_statistics(client):
     assert stats.status_code == 200
     assert stats.json()["total_submissions"] >= 1
     assert stats.json()["accepted_count"] >= 1
+
+
+def test_teacher_export_student_scores(client):
+    student_headers = login(client)
+    problems = client.get("/api/problems", headers=student_headers).json()
+    problem = next(item for item in problems if item["title"] == "两数之和")
+    client.post(
+        "/api/submissions",
+        headers=student_headers,
+        json={
+            "problem_id": problem["id"],
+            "code": "a, b = map(int, input().split())\nprint(a + b)",
+            "language": "python",
+        },
+    )
+
+    teacher_headers = login(client, username="teacher", password="teacher123")
+    exported = client.get(
+        "/api/admin/statistics/export",
+        headers=teacher_headers,
+    )
+    assert exported.status_code == 200
+    data = exported.json()
+    assert data["problems"]
+    student_row = next(
+        item for item in data["rows"] if item["username"] == "student"
+    )
+    assert student_row["submission_count"] == 1
+    assert student_row["accepted_count"] == 1
+    assert student_row["problem_statuses"][str(problem["id"])] == "通过"
+
+
+def test_student_cannot_export_scores(client):
+    headers = login(client)
+    response = client.get("/api/admin/statistics/export", headers=headers)
+    assert response.status_code == 403
 
 
 def test_student_cannot_manage_students(client):

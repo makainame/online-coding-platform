@@ -1,8 +1,10 @@
+from datetime import datetime, timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import Problem, Submission, User
+from ..models import Exam, ExamAttempt, ExamProblem, Problem, Submission, User
 from ..schemas import (
     ExecuteRequest,
     ExecuteResultOut,
@@ -87,10 +89,43 @@ def create_submission(
     problem = db.query(Problem).filter(Problem.id == payload.problem_id).first()
     if problem is None:
         raise HTTPException(status_code=404, detail="题目不存在")
+
+    if payload.exam_id is not None:
+        exam = db.query(Exam).filter(Exam.id == payload.exam_id).first()
+        if exam is None:
+            raise HTTPException(status_code=404, detail="考试不存在")
+        attempt = (
+            db.query(ExamAttempt)
+            .filter(
+                ExamAttempt.exam_id == payload.exam_id,
+                ExamAttempt.user_id == user.id,
+            )
+            .first()
+        )
+        if attempt is None or attempt.status != "in_progress":
+            raise HTTPException(status_code=400, detail="考试尚未开始或已提交")
+        if (
+            attempt.started_at
+            and datetime.utcnow()
+            > attempt.started_at + timedelta(minutes=exam.duration_minutes)
+        ):
+            raise HTTPException(status_code=400, detail="考试时间已结束，无法继续提交")
+        problem_link = (
+            db.query(ExamProblem)
+            .filter(
+                ExamProblem.exam_id == payload.exam_id,
+                ExamProblem.problem_id == payload.problem_id,
+            )
+            .first()
+        )
+        if problem_link is None:
+            raise HTTPException(status_code=400, detail="该题目不属于本次考试")
+
     result = execute_code(payload.code, payload.language, problem.test_cases)
     submission = Submission(
         user_id=user.id,
         problem_id=payload.problem_id,
+        exam_id=payload.exam_id,
         code=payload.code,
         language=payload.language,
         status=result.status,

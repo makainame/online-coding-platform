@@ -2,7 +2,7 @@
 
 基于 FastAPI + Vue 3 的在线代码练习平台 MVP，支持：
 
-- 学生注册/登录、查看题目、在线编写 Python 代码
+- 学生注册/登录、查看题目、在线编写 Python / JavaScript / Java / C++ 代码
 - 运行代码并执行测试用例
 - 提交记录管理
 - AI 反馈（可切换 DeepSeek / Qwen，未配置 Key 时使用本地规则反馈）
@@ -71,22 +71,24 @@ QWEN_API_KEY=your_key
 
 - 代码执行默认使用本地 `subprocess`，适合开发测试
 - Docker 部署可设置 `EXECUTION_MODE=docker`，使用容器沙箱并做资源限制
-- 当前只支持 Python 代码执行
+- 当前支持 Python、JavaScript、Java、C++ 代码执行
 - 数据库默认使用 SQLite，生产环境切换为 MySQL
 
-## 扩展多语言题库
+## 多语言执行与扩展
 
-项目已经预留多语言扩展口：
+项目已接入 Python、JavaScript、Java、C++，并保留多语言扩展口：
 
 - 题目数据支持 `language` 字段，默认 `python`
 - 后端执行器通过 `register_executor(language, fn)` 注册
 - 前端 Monaco Editor 会根据题目语言自动切换
 
-后续接入 Java、JavaScript、C++ 等语言时，只需要：
+后续接入 Go、Rust 等语言时，只需要：
 
 1. 在题目数据里设置对应的 `language`
 2. 在 `backend/app/services/executor_registry.py` 注册新的执行器
 3. 增加对应语言的测试用例
+
+C++ 沙箱镜像通过 `CPP_RUNNER_IMAGE` 配置，默认使用 `gcc:13-bookworm`。
 
 ## 题库导入
 
@@ -127,3 +129,5 @@ bash deploy/ubuntu/setup_ubuntu.sh
 cp deploy/ubuntu/.env.production.example .env
 bash deploy/ubuntu/deploy.sh
 ```
+
+Windows 本机通过 SSH 直连 VM 完成同步、部署和 GitHub 推送的操作，见 [Windows 直连 VM 操作手册](docs/Windows直连VM操作手册.md)。

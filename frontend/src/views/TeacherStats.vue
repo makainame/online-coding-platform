@@ -1,10 +1,13 @@
 <script setup>
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import * as echarts from "echarts";
+import { ElMessage } from "element-plus";
+import * as XLSX from "xlsx";
 import api from "../api";
 
 const stats = ref(null);
 const loading = ref(false);
+const exporting = ref(false);
 const passChartRef = ref(null);
 const statusChartRef = ref(null);
 const studentChartRef = ref(null);
@@ -20,6 +23,57 @@ async function loadStats() {
     renderCharts();
   } finally {
     loading.value = false;
+  }
+}
+
+async function exportScores() {
+  exporting.value = true;
+  try {
+    const { data } = await api.get("/admin/statistics/export");
+    const problems = data.problems || [];
+    const headers = [
+      "用户名",
+      "班级",
+      "邮箱",
+      "提交数",
+      "通过数",
+      "通过率",
+      ...problems.map((problem) =>
+        problem.language === "python"
+          ? problem.title
+          : `${problem.title} (${problem.language})`,
+      ),
+    ];
+    const rows = data.rows.map((row) => [
+      row.username,
+      row.class_name || "",
+      row.email || "",
+      row.submission_count,
+      row.accepted_count,
+      row.pass_rate,
+      ...problems.map(
+        (problem) => row.problem_statuses[String(problem.problem_id)] || "未作答",
+      ),
+    ]);
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    worksheet["!cols"] = [
+      { wch: 16 },
+      { wch: 16 },
+      { wch: 26 },
+      { wch: 10 },
+      { wch: 10 },
+      { wch: 10 },
+      ...problems.map(() => ({ wch: 24 })),
+    ];
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "学生成绩");
+    const date = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(workbook, `学生成绩_${date}.xlsx`);
+    ElMessage.success("成绩已导出");
+  } catch (error) {
+    ElMessage.error(error.response?.data?.detail || "导出失败");
+  } finally {
+    exporting.value = false;
   }
 }
 
@@ -230,13 +284,19 @@ onBeforeUnmount(() => {
         <h1>学生明细</h1>
         <p v-if="stats">{{ stats.students.length }} 个学生账号</p>
       </div>
-      <el-button @click="loadStats">刷新</el-button>
+      <div class="head-actions">
+        <el-button :loading="exporting" @click="exportScores">导出成绩</el-button>
+        <el-button @click="loadStats">刷新</el-button>
+      </div>
     </div>
 
     <div class="panel">
       <el-table v-loading="loading" :data="stats?.students || []" row-key="user_id">
         <el-table-column prop="user_id" label="ID" width="80" />
         <el-table-column prop="username" label="用户名" min-width="140" />
+        <el-table-column prop="class_name" label="班级" min-width="120">
+          <template #default="{ row }">{{ row.class_name || "未分班" }}</template>
+        </el-table-column>
         <el-table-column prop="email" label="邮箱" min-width="200" />
         <el-table-column prop="submission_count" label="提交数" width="100" />
         <el-table-column prop="accepted_count" label="通过数" width="100" />
@@ -327,5 +387,11 @@ onBeforeUnmount(() => {
 .chart {
   width: 100%;
   height: 300px;
+}
+
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 </style>

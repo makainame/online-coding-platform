@@ -3,6 +3,7 @@ import { onMounted, reactive, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { useRouter } from "vue-router";
 import api from "./api";
+import { pageLoading } from "./loading";
 
 const router = useRouter();
 const user = ref(null);
@@ -94,9 +95,15 @@ async function submitAuth() {
     localStorage.setItem("token", data.token);
     user.value = data.user;
     showAuth.value = false;
+    ElMessage.success(authMode.value === "login" ? "登录成功" : "注册成功");
     if (router.currentRoute.value.name === "home") {
       router.go(0);
     }
+  } catch (error) {
+    ElMessage.error(
+      error.response?.data?.detail ||
+        (authMode.value === "login" ? "登录失败" : "注册失败"),
+    );
   } finally {
     loading.value = false;
   }
@@ -108,10 +115,19 @@ function logout() {
   router.push("/");
 }
 
-onMounted(loadUser);
+onMounted(async () => {
+  pageLoading.value = true;
+  await loadUser();
+  pageLoading.value = false;
+});
 </script>
 
 <template>
+  <div v-if="pageLoading" class="page-loading">
+    <div class="loading-spinner"></div>
+    <span>加载中...</span>
+  </div>
+
   <div class="app-shell">
     <header class="topbar">
       <div class="brand">
@@ -124,11 +140,20 @@ onMounted(loadUser);
         <router-link v-if="user?.role === 'teacher'" to="/students">
           学生管理
         </router-link>
+        <router-link v-if="user?.role === 'teacher'" to="/classes">
+          班级管理
+        </router-link>
+        <router-link v-if="user?.role === 'teacher'" to="/admin/exams">
+          考试管理
+        </router-link>
         <router-link v-if="user?.role === 'teacher'" to="/question-bank">
           题库管理
         </router-link>
         <router-link v-if="user?.role === 'teacher'" to="/teacher-stats">
           统计面板
+        </router-link>
+        <router-link v-if="user?.role === 'student'" to="/exams">
+          考试
         </router-link>
         <router-link v-if="user" to="/ai-settings">AI 配置</router-link>
       </nav>
@@ -227,6 +252,35 @@ onMounted(loadUser);
 </template>
 
 <style scoped>
+.page-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: rgba(244, 246, 248, 0.92);
+  color: #475569;
+  font-weight: 600;
+}
+
+.loading-spinner {
+  width: 38px;
+  height: 38px;
+  border: 4px solid #dbe4e8;
+  border-top-color: #176b5b;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .avatar-wrap {
   width: 32px;
   height: 32px;

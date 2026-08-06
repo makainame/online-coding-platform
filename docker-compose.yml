@@ -30,6 +30,9 @@ services:
       QWEN_MODEL: ${QWEN_MODEL:-qwen3.7-plus}
       EXECUTION_MODE: ${EXECUTION_MODE:-docker}
       PYTHON_RUNNER_IMAGE: ${PYTHON_RUNNER_IMAGE:-python:3.12-slim}
+      NODE_RUNNER_IMAGE: ${NODE_RUNNER_IMAGE:-node:20-alpine}
+      JAVA_RUNNER_IMAGE: ${JAVA_RUNNER_IMAGE:-openjdk:17-jdk-slim}
+      CPP_RUNNER_IMAGE: ${CPP_RUNNER_IMAGE:-gcc:13-bookworm}
     ports:
       - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
     volumes:

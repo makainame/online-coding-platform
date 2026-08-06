@@ -12,6 +12,26 @@ DEFAULT_STARTER = """def solve():
 solve()
 """
 
+DEFAULT_JAVASCRIPT_STARTER = """const fs = require('fs');
+const input = fs.readFileSync(0, 'utf8').trim();
+console.log(input);
+"""
+
+DEFAULT_JAVA_STARTER = """public class Main {
+    public static void main(String[] args) {
+        System.out.println("Hello Java");
+    }
+}
+"""
+
+DEFAULT_CPP_STARTER = """#include <iostream>
+
+int main() {
+    std::cout << "Hello C++" << std::endl;
+    return 0;
+}
+"""
+
 
 STARTER_CODES = {
     "两数之和": """def solve():
@@ -325,6 +345,18 @@ ALL_STARTER_CODES = {
 
 def get_starter_code(problem) -> str:
     custom_code = getattr(problem, "starter_code", None)
+    language = getattr(problem, "language", "python")
+    if language != "python":
+        if custom_code:
+            return custom_code
+        if language == "javascript":
+            return DEFAULT_JAVASCRIPT_STARTER
+        if language == "java":
+            return DEFAULT_JAVA_STARTER
+        if language == "cpp":
+            return DEFAULT_CPP_STARTER
+        return ""
+
     code = custom_code or ALL_STARTER_CODES.get(problem.title, DEFAULT_STARTER)
     hint = ADVANCED_STARTER_HINTS.get(problem.title)
     header = (

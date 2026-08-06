@@ -6,14 +6,17 @@ from sqlalchemy.orm import Session
 
 from ..ai_crypto import encrypt_api_key
 from ..database import get_db
-from ..models import AiSetting, Submission, User
+from ..models import AiSetting, ClassGroup, Problem, Submission, User
 from ..schemas import (
     AdminStatsOut,
     AdminStudentStatOut,
     DailyStatOut,
     PasswordReset,
+    ScoreExportOut,
+    ScoreExportProblem,
     StudentCreate,
     StudentImportResult,
+    StudentScoreExportRow,
     StudentOut,
 )
 from ..security import hash_password, require_teacher
@@ -65,6 +68,7 @@ def admin_statistics(
     ]
 
     student_rows = []
+    class_name_by_id = _class_name_map(db, students)
     for student in students:
         _student_counts(db, student)
         student_rows.append(
@@ -72,6 +76,8 @@ def admin_statistics(
                 user_id=student.id,
                 username=student.username,
                 email=student.email,
+                class_id=student.class_id,
+                class_name=class_name_by_id.get(student.class_id, ""),
                 submission_count=student.submission_count,
                 accepted_count=student.accepted_count,
                 pass_rate=round(
@@ -95,6 +101,72 @@ def admin_statistics(
     )
 
 
+@router.get("/admin/statistics/export", response_model=ScoreExportOut)
+def export_student_scores(
+    db: Session = Depends(get_db),
+    _: User = Depends(require_teacher),
+) -> ScoreExportOut:
+    students = (
+        db.query(User)
+        .filter(User.role == "student")
+        .order_by(User.id)
+        .all()
+    )
+    problems = db.query(Problem).order_by(Problem.id).all()
+    submissions = db.query(Submission).all()
+
+    student_problem_stats: dict[int, dict[int, dict[str, int]]] = {}
+    for submission in submissions:
+        student_stats = student_problem_stats.setdefault(submission.user_id, {})
+        stats = student_stats.setdefault(
+            submission.problem_id,
+            {"submissions": 0, "accepted": 0},
+        )
+        stats["submissions"] += 1
+        if submission.status == "accepted":
+            stats["accepted"] += 1
+
+    rows = []
+    class_name_by_id = _class_name_map(db, students)
+    for student in students:
+        stats_by_problem = student_problem_stats.get(student.id, {})
+        total = sum(item["submissions"] for item in stats_by_problem.values())
+        accepted = sum(item["accepted"] for item in stats_by_problem.values())
+        problem_statuses = {}
+        for problem in problems:
+            stats = stats_by_problem.get(problem.id, {"submissions": 0, "accepted": 0})
+            if stats["accepted"] > 0:
+                problem_statuses[str(problem.id)] = "通过"
+            elif stats["submissions"] > 0:
+                problem_statuses[str(problem.id)] = "已提交未通过"
+            else:
+                problem_statuses[str(problem.id)] = "未作答"
+        rows.append(
+            StudentScoreExportRow(
+                username=student.username,
+                email=student.email,
+                class_id=student.class_id,
+                class_name=class_name_by_id.get(student.class_id, ""),
+                submission_count=total,
+                accepted_count=accepted,
+                pass_rate=round(accepted / total * 100, 1) if total else 0.0,
+                problem_statuses=problem_statuses,
+            )
+        )
+
+    return ScoreExportOut(
+        problems=[
+            ScoreExportProblem(
+                problem_id=problem.id,
+                title=problem.title,
+                language=problem.language,
+            )
+            for problem in problems
+        ],
+        rows=rows,
+    )
+
+
 def _student_counts(db: Session, student: User) -> None:
     student.submission_count = (
         db.query(func.count(Submission.id))
@@ -111,6 +183,18 @@ def _student_counts(db: Session, student: User) -> None:
         .scalar()
         or 0
     )
+
+
+def _class_name_map(db: Session, students: list[User]) -> dict[int, str]:
+    class_ids = {student.class_id for student in students if student.class_id}
+    if not class_ids:
+        return {}
+    return {
+        class_group.id: class_group.name
+        for class_group in db.query(ClassGroup)
+        .filter(ClassGroup.id.in_(class_ids))
+        .all()
+    }
 
 
 def _build_student(db: Session, payload: StudentCreate) -> User:
@@ -146,8 +230,10 @@ def list_students(
         .order_by(User.id)
         .all()
     )
+    class_name_by_id = _class_name_map(db, students)
     for student in students:
         _student_counts(db, student)
+        student.class_name = class_name_by_id.get(student.class_id, "")
     return students
 
 
