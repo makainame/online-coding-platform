@@ -152,8 +152,14 @@ def _exam_description(problem: Problem) -> str:
     return "\n".join(lines).rstrip()
 
 
-def _exam_problem_out(problem_link: ExamProblem) -> ExamProblemOut:
+def _exam_problem_out(
+    problem_link: ExamProblem,
+    include_test_cases: bool = True,
+) -> ExamProblemOut:
     problem = problem_link.problem
+    sample_cases = [
+        case for case in problem.test_cases if case.is_sample
+    ]
     return ExamProblemOut(
         id=problem_link.id,
         problem_id=problem.id,
@@ -173,7 +179,7 @@ def _exam_problem_out(problem_link: ExamProblem) -> ExamProblemOut:
                 expected_output=case.expected_output,
                 is_sample=case.is_sample,
             )
-            for case in problem.test_cases
+            for case in (sample_cases if include_test_cases else [])
         ],
     )
 
@@ -203,7 +209,11 @@ def _exam_starter_code(problem: Problem) -> str:
     return ""
 
 
-def _exam_detail(db: Session, exam: Exam) -> ExamDetail:
+def _exam_detail(
+    db: Session,
+    exam: Exam,
+    include_test_cases: bool = True,
+) -> ExamDetail:
     _attach_exam_meta(db, [exam])
     return ExamDetail(
         id=exam.id,
@@ -217,7 +227,7 @@ def _exam_detail(db: Session, exam: Exam) -> ExamDetail:
         problem_count=exam.problem_count,
         attempt_count=exam.attempt_count,
         problems=[
-            _exam_problem_out(problem_link)
+            _exam_problem_out(problem_link, include_test_cases)
             for problem_link in sorted(exam.problems, key=lambda item: item.order_index)
         ],
     )
@@ -230,7 +240,7 @@ def _can_access_exam(db: Session, exam: Exam, user: User) -> bool:
 
 
 def _student_exam_detail(db: Session, exam: Exam, user: User) -> StudentExamDetail:
-    detail = _exam_detail(db, exam)
+    detail = _exam_detail(db, exam, include_test_cases=False)
     attempt = (
         db.query(ExamAttempt)
         .filter(ExamAttempt.exam_id == exam.id, ExamAttempt.user_id == user.id)

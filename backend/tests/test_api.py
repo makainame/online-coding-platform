@@ -713,6 +713,7 @@ def test_teacher_can_create_standard_stage_exam(client):
         for item in data["problems"]
     )
     assert all("示例" in item["description"] for item in data["problems"])
+    assert all(item["test_cases"] for item in data["problems"])
 
     titles = [item["title"] for item in data["problems"]]
     assert len(titles) == len(set(titles))
@@ -775,6 +776,10 @@ def test_student_exam_flow_and_score(client):
     assert detail.status_code == 200
     assert detail.json()["attempt_status"] == "submitted"
     assert detail.json()["results"][str(problem["id"])] == "accepted"
+    assert all(
+        not item.get("test_cases")
+        for item in detail.json()["problems"]
+    )
 
     results = client.get(
         f"/api/admin/exams/{exam['id']}/results",
