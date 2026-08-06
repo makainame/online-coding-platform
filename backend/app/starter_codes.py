@@ -33,6 +33,38 @@ int main() {
 """
 
 
+BLANK_STARTERS = {
+    "python": "# 请根据题目要求完成代码\n",
+    "javascript": (
+        "const fs = require('fs');\n"
+        "const input = fs.readFileSync(0, 'utf8').trim();\n"
+        "// 请根据题目要求完成代码\n"
+    ),
+    "java": (
+        "import java.util.Scanner;\n"
+        "\n"
+        "public class Main {\n"
+        "    public static void main(String[] args) {\n"
+        "        Scanner sc = new Scanner(System.in);\n"
+        "        // 请根据题目要求完成代码\n"
+        "    }\n"
+        "}\n"
+    ),
+    "cpp": (
+        "#include <iostream>\n"
+        "\n"
+        "int main() {\n"
+        "    // 请根据题目要求完成代码\n"
+        "    return 0;\n"
+        "}\n"
+    ),
+}
+
+
+def get_blank_starter(language: str) -> str:
+    return BLANK_STARTERS.get(language, "")
+
+
 STARTER_CODES = {
     "两数之和": """def solve():
     a, b = map(int, input().split())
@@ -344,26 +376,5 @@ ALL_STARTER_CODES = {
 
 
 def get_starter_code(problem) -> str:
-    custom_code = getattr(problem, "starter_code", None)
     language = getattr(problem, "language", "python")
-    if language != "python":
-        if custom_code:
-            return custom_code
-        if language == "javascript":
-            return DEFAULT_JAVASCRIPT_STARTER
-        if language == "java":
-            return DEFAULT_JAVA_STARTER
-        if language == "cpp":
-            return DEFAULT_CPP_STARTER
-        return ""
-
-    code = custom_code or ALL_STARTER_CODES.get(problem.title, DEFAULT_STARTER)
-    hint = ADVANCED_STARTER_HINTS.get(problem.title)
-    header = (
-        f"# 题目：{problem.title}\n"
-        f"# 知识点：{problem.tags or 'Python'}\n"
-    )
-    if hint:
-        header += f"# 提示：{hint}\n"
-    header += "# 先读取输入，再按题目要求处理，最后用 print 输出结果\n\n"
-    return add_line_comments(header + code)
+    return get_blank_starter(language)
