@@ -106,7 +106,7 @@ onMounted(loadProblems);
     <div class="page-head">
       <div>
         <h1>练习题库</h1>
-        <p>{{ problems.length }} 道题目</p>
+        <p>{{ loading ? "题库加载中..." : `${problems.length} 道题目` }}</p>
       </div>
       <div class="filter-bar">
         <el-input
@@ -129,65 +129,80 @@ onMounted(loadProblems);
     </div>
 
     <div class="panel">
-      <el-collapse v-model="expandedLanguages" class="language-collapse">
-        <el-collapse-item
-          v-for="group in languages"
-          :key="group.language"
-          :name="group.language"
-        >
-          <template #title>
-            <div class="language-title">
-              <span class="language-badge">{{ group.label }}</span>
-              <span class="language-count">{{ group.items.length }} 道</span>
+      <div v-if="loading" class="question-skeleton">
+        <div v-for="group in 3" :key="group" class="skeleton-group">
+          <div class="skeleton-title"></div>
+          <div class="skeleton-table">
+            <div v-for="row in 5" :key="row" class="skeleton-row">
+              <span></span>
+              <span></span>
+              <span></span>
             </div>
-          </template>
-          <el-table
-            v-loading="loading"
-            :data="group.items"
-            row-key="id"
-            @row-click="(row) => openProblem(row.id)"
-          >
-            <el-table-column type="index" label="#" width="72" />
-            <el-table-column prop="title" label="题目" min-width="240" />
-            <el-table-column prop="language" label="语言" width="100" />
-            <el-table-column prop="tags" label="标签" min-width="180" />
-            <el-table-column label="难度" width="110">
-              <template #default="{ row }">
-                <el-tag :type="difficultyClass[row.difficulty]" effect="plain">
-                  {{ difficultyLabel[row.difficulty] || row.difficulty }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="" width="90">
-              <template #default>
-                <span class="open-link">打开</span>
-              </template>
-            </el-table-column>
-          </el-table>
-        </el-collapse-item>
-      </el-collapse>
-      <div v-if="!loading && filtered.length === 0" class="empty-state">
-        <svg
-          class="empty-icon"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <circle cx="11" cy="11" r="7" />
-          <line x1="16.5" y1="16.5" x2="21" y2="21" />
-        </svg>
-        <p>{{ hasToken ? "暂无匹配题目" : "登录后查看题库" }}</p>
-        <p v-if="hasToken" class="empty-hint">换个关键词或难度试试</p>
-        <el-button
-          v-if="hasToken && (keyword || difficulty)"
-          @click="clearFilters"
-        >
-          清除筛选
-        </el-button>
+          </div>
+        </div>
       </div>
+
+      <template v-else>
+        <el-collapse v-model="expandedLanguages" class="language-collapse">
+          <el-collapse-item
+            v-for="group in languages"
+            :key="group.language"
+            :name="group.language"
+          >
+            <template #title>
+              <div class="language-title">
+                <span class="language-badge">{{ group.label }}</span>
+                <span class="language-count">{{ group.items.length }} 道</span>
+              </div>
+            </template>
+            <el-table
+              :data="group.items"
+              row-key="id"
+              @row-click="(row) => openProblem(row.id)"
+            >
+              <el-table-column type="index" label="#" width="72" />
+              <el-table-column prop="title" label="题目" min-width="240" />
+              <el-table-column prop="language" label="语言" width="100" />
+              <el-table-column prop="tags" label="标签" min-width="180" />
+              <el-table-column label="难度" width="110">
+                <template #default="{ row }">
+                  <el-tag :type="difficultyClass[row.difficulty]" effect="plain">
+                    {{ difficultyLabel[row.difficulty] || row.difficulty }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="" width="90">
+                <template #default>
+                  <span class="open-link">打开</span>
+                </template>
+              </el-table-column>
+            </el-table>
+          </el-collapse-item>
+        </el-collapse>
+
+        <div v-if="filtered.length === 0" class="empty-state">
+          <svg
+            class="empty-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <line x1="16.5" y1="16.5" x2="21" y2="21" />
+          </svg>
+          <p>{{ hasToken ? "暂无匹配题目" : "登录后查看题库" }}</p>
+          <p v-if="hasToken" class="empty-hint">换个关键词或难度试试</p>
+          <el-button
+            v-if="hasToken && (keyword || difficulty)"
+            @click="clearFilters"
+          >
+            清除筛选
+          </el-button>
+        </div>
+      </template>
     </div>
   </section>
 </template>
@@ -250,6 +265,63 @@ onMounted(loadProblems);
   margin: 6px 0 0;
   color: #94a3b8;
   font-size: 13px;
+}
+
+.question-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 18px;
+}
+
+.skeleton-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.skeleton-title {
+  width: 180px;
+  height: 18px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #edf1f4 25%, #e2e8ed 37%, #edf1f4 63%);
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+}
+
+.skeleton-table {
+  border: 1px solid #eef1f4;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.skeleton-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 16px;
+  padding: 16px 18px;
+  border-bottom: 1px solid #eef1f4;
+}
+
+.skeleton-row:last-child {
+  border-bottom: 0;
+}
+
+.skeleton-row span {
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #edf1f4 25%, #e2e8ed 37%, #edf1f4 63%);
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: 0 0;
+  }
 }
 
 :deep(.el-table__row) {

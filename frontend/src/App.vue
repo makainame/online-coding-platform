@@ -2,6 +2,15 @@
 import { onMounted, reactive, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { useRouter } from "vue-router";
+import {
+  Cpu,
+  Key,
+  Link,
+  Lock,
+  Message,
+  Picture,
+  User,
+} from "@element-plus/icons-vue";
 import api from "./api";
 import { pageLoading } from "./loading";
 
@@ -83,6 +92,10 @@ function openAuth(mode = "login") {
   showAuth.value = true;
 }
 
+function switchAuth(mode) {
+  authMode.value = mode;
+}
+
 async function submitAuth() {
   loading.value = true;
   try {
@@ -97,7 +110,9 @@ async function submitAuth() {
     showAuth.value = false;
     ElMessage.success(authMode.value === "login" ? "登录成功" : "注册成功");
     if (router.currentRoute.value.name === "home") {
-      router.go(0);
+      router.replace({ path: "/", query: { t: Date.now() } });
+    } else {
+      router.push("/");
     }
   } catch (error) {
     ElMessage.error(
@@ -177,59 +192,138 @@ onMounted(async () => {
     </header>
 
     <main class="main-content">
-      <router-view />
+      <router-view :key="$route.fullPath" />
     </main>
   </div>
 
   <el-dialog
     v-model="showAuth"
-    :title="authMode === 'login' ? '登录' : '注册'"
-    width="380px"
+    width="460px"
     destroy-on-close
+    class="auth-dialog"
   >
-    <el-form label-position="top">
+    <div class="auth-header">
+      <h2>{{ authMode === "login" ? "欢迎回来" : "创建账号" }}</h2>
+      <p>
+        {{
+          authMode === "login"
+            ? "登录后继续练习、考试和查看学习记录"
+            : "注册后即可开始在线练习"
+        }}
+      </p>
+    </div>
+
+    <div class="auth-tabs">
+      <button
+        type="button"
+        :class="{ active: authMode === 'login' }"
+        @click="switchAuth('login')"
+      >
+        登录
+      </button>
+      <button
+        type="button"
+        :class="{ active: authMode === 'register' }"
+        @click="switchAuth('register')"
+      >
+        注册
+      </button>
+    </div>
+
+    <el-form label-position="top" class="auth-form">
       <el-form-item label="用户名">
-        <el-input v-model="form.username" autocomplete="username" />
+        <el-input
+          v-model="form.username"
+          :prefix-icon="User"
+          autocomplete="username"
+          placeholder="请输入用户名"
+        />
       </el-form-item>
       <el-form-item label="密码">
-        <el-input v-model="form.password" type="password" show-password autocomplete="current-password" />
+        <el-input
+          v-model="form.password"
+          :prefix-icon="Lock"
+          type="password"
+          show-password
+          autocomplete="current-password"
+          placeholder="请输入密码"
+        />
       </el-form-item>
       <template v-if="authMode === 'register'">
         <el-form-item label="邮箱">
-          <el-input v-model="form.email" autocomplete="email" />
+          <el-input
+            v-model="form.email"
+            :prefix-icon="Message"
+            autocomplete="email"
+            placeholder="选填，用于找回账号"
+          />
         </el-form-item>
         <el-form-item label="头像">
           <div class="avatar-upload">
-            <img v-if="avatarPreview" :src="avatarPreview" class="avatar-preview" alt="" />
-            <input type="file" accept="image/*" @change="onAvatarChange" />
+            <label class="avatar-picker">
+              <img
+                v-if="avatarPreview"
+                :src="avatarPreview"
+                class="avatar-preview"
+                alt=""
+              />
+              <span v-else class="avatar-placeholder">选择头像</span>
+              <input
+                type="file"
+                accept="image/*"
+                class="avatar-input"
+                @change="onAvatarChange"
+              />
+            </label>
+            <span class="avatar-tip">支持 jpg/png，不超过 2MB</span>
           </div>
         </el-form-item>
         <el-form-item label="角色">
-          <el-radio-group v-model="form.role">
-            <el-radio value="student">学生</el-radio>
-            <el-radio value="teacher">教师</el-radio>
+          <el-radio-group v-model="form.role" class="auth-radio-group">
+            <el-radio-button value="student">学生</el-radio-button>
+            <el-radio-button value="teacher">教师</el-radio-button>
           </el-radio-group>
         </el-form-item>
         <template v-if="form.role === 'student'">
           <el-form-item label="AI 服务商">
-            <el-radio-group v-model="form.ai_provider">
-              <el-radio value="deepseek">DeepSeek</el-radio>
-              <el-radio value="qwen">通义千问</el-radio>
+            <el-radio-group v-model="form.ai_provider" class="auth-radio-group">
+              <el-radio-button value="deepseek">DeepSeek</el-radio-button>
+              <el-radio-button value="qwen">通义千问</el-radio-button>
             </el-radio-group>
           </el-form-item>
           <el-form-item label="API 地址">
-            <el-input v-model="form.ai_base_url" />
+            <el-input
+              v-model="form.ai_base_url"
+              :prefix-icon="Link"
+              placeholder="API 地址"
+            />
           </el-form-item>
           <el-form-item label="模型">
-            <el-input v-model="form.ai_model" />
+            <el-input
+              v-model="form.ai_model"
+              :prefix-icon="Cpu"
+              placeholder="模型名称"
+            />
           </el-form-item>
           <el-form-item label="自己的 API Key">
-            <el-input v-model="form.ai_api_key" type="password" show-password />
+            <el-input
+              v-model="form.ai_api_key"
+              :prefix-icon="Key"
+              type="password"
+              show-password
+              placeholder="输入自己的 API Key"
+            />
           </el-form-item>
         </template>
         <template v-else>
           <el-form-item label="教师授权码">
-            <el-input v-model="form.teacher_code" type="password" show-password />
+            <el-input
+              v-model="form.teacher_code"
+              :prefix-icon="Key"
+              type="password"
+              show-password
+              placeholder="请输入教师授权码"
+            />
           </el-form-item>
         </template>
       </template>
@@ -239,11 +333,16 @@ onMounted(async () => {
         <button
           class="text-button"
           type="button"
-          @click="authMode = authMode === 'login' ? 'register' : 'login'"
+          @click="switchAuth(authMode === 'login' ? 'register' : 'login')"
         >
           {{ authMode === "login" ? "注册账号" : "已有账号" }}
         </button>
-        <el-button type="primary" :loading="loading" @click="submitAuth">
+        <el-button
+          type="primary"
+          class="auth-submit"
+          :loading="loading"
+          @click="submitAuth"
+        >
           {{ authMode === "login" ? "登录" : "注册" }}
         </el-button>
       </div>
@@ -320,5 +419,93 @@ onMounted(async () => {
   border-radius: 50%;
   object-fit: cover;
   border: 1px solid #dde3e8;
+}
+
+.auth-header {
+  padding: 4px 2px 16px;
+}
+
+.auth-header h2 {
+  margin: 0 0 6px;
+  font-size: 22px;
+  letter-spacing: 0;
+}
+
+.auth-header p {
+  margin: 0;
+  color: #64748b;
+}
+
+.auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 5px;
+  margin-bottom: 18px;
+  border-radius: 8px;
+  background: #f1f4f6;
+}
+
+.auth-tabs button {
+  height: 36px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #64748b;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth-tabs button.active {
+  background: #ffffff;
+  color: #176b5b;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
+}
+
+.auth-form :deep(.el-form-item) {
+  margin-bottom: 16px;
+}
+
+.auth-radio-group {
+  display: flex;
+}
+
+.avatar-picker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 1px dashed #cbd5e1;
+  background: #f8fafc;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.avatar-placeholder {
+  color: #64748b;
+  font-size: 12px;
+  text-align: center;
+}
+
+.avatar-input {
+  display: none;
+}
+
+.avatar-tip {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.auth-submit {
+  min-width: 108px;
+}
+
+.dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 </style>
