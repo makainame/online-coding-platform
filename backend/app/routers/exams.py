@@ -22,6 +22,8 @@ from ..schemas import (
     ExamAutoUpdate,
     ExamCreate,
     ExamDetail,
+    ExamKnowledgeReportOut,
+    ExamKnowledgeStat,
     ExamOut,
     ExamProblemOut,
     ExamResultOut,
@@ -29,7 +31,9 @@ from ..schemas import (
     ExamStartOut,
     ExamSubmitOut,
     ExamSubmitRequest,
+    ExamWrongProblemStat,
     ExamUpdate,
+    StudentKnowledgeRow,
     ExamProblemTestCase,
     StudentExamDetail,
     StudentExamOut,
@@ -657,6 +661,174 @@ def export_exam_results(
     _: User = Depends(require_teacher),
 ) -> list[ExamResultOut]:
     return get_exam_results(exam_id, db, _)
+
+
+@router.get(
+    "/admin/exams/{exam_id}/knowledge-report",
+    response_model=ExamKnowledgeReportOut,
+)
+def get_exam_knowledge_report(
+    exam_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_teacher),
+) -> ExamKnowledgeReportOut:
+    exam = db.query(Exam).filter(Exam.id == exam_id).first()
+    if exam is None:
+        raise HTTPException(status_code=404, detail="考试不存在")
+
+    attempts = (
+        db.query(ExamAttempt)
+        .filter(ExamAttempt.exam_id == exam_id)
+        .all()
+    )
+    users = {
+        user.id: user
+        for user in db.query(User)
+        .filter(User.id.in_([attempt.user_id for attempt in attempts]))
+        .all()
+    }
+    class_names = _class_name_map(
+        db,
+        {user.class_id for user in users.values() if user.class_id},
+    )
+    submissions = (
+        db.query(Submission)
+        .filter(Submission.exam_id == exam_id)
+        .all()
+    )
+    status_by_user_problem: dict[int, dict[int, str]] = {}
+    for submission in submissions:
+        user_map = status_by_user_problem.setdefault(submission.user_id, {})
+        if submission.status == "accepted":
+            user_map[submission.problem_id] = "accepted"
+        elif submission.problem_id not in user_map:
+            user_map[submission.problem_id] = "submitted"
+
+    problem_links = sorted(exam.problems, key=lambda item: item.order_index)
+    problems_by_id = {
+        link.problem.id: link.problem
+        for link in problem_links
+    }
+    students: list[StudentKnowledgeRow] = []
+    overall_point_stats: dict[str, dict[str, int]] = {}
+
+    for attempt in attempts:
+        point_stats: dict[str, dict[str, int]] = {}
+        for link in problem_links:
+            accepted = (
+                status_by_user_problem.get(attempt.user_id, {}).get(
+                    link.problem_id,
+                    "",
+                )
+                == "accepted"
+            )
+            for tag in _problem_tags(link.problem):
+                stat = point_stats.setdefault(tag, {"total": 0, "accepted": 0})
+                overall_stat = overall_point_stats.setdefault(
+                    tag,
+                    {"total": 0, "accepted": 0},
+                )
+                stat["total"] += 1
+                overall_stat["total"] += 1
+                if accepted:
+                    stat["accepted"] += 1
+                    overall_stat["accepted"] += 1
+
+        accepted_problems = sum(
+            1
+            for link in problem_links
+            if status_by_user_problem.get(attempt.user_id, {}).get(
+                link.problem_id,
+                "",
+            )
+            == "accepted"
+        )
+        knowledge_stats = [
+            ExamKnowledgeStat(
+                knowledge_point=point,
+                total_problems=value["total"],
+                accepted_problems=value["accepted"],
+                pass_rate=round(
+                    value["accepted"] / value["total"] * 100,
+                    1,
+                )
+                if value["total"]
+                else 0.0,
+            )
+            for point, value in sorted(point_stats.items())
+        ]
+        weak_points = [
+            stat.knowledge_point
+            for stat in knowledge_stats
+            if stat.pass_rate < 60
+        ]
+        user = users.get(attempt.user_id)
+        students.append(
+            StudentKnowledgeRow(
+                user_id=attempt.user_id,
+                username=user.username if user else str(attempt.user_id),
+                class_name=class_names.get(user.class_id, "") if user else "",
+                score=attempt.score,
+                total_problems=attempt.total_problems,
+                accepted_problems=attempt.accepted_problems,
+                pass_rate=round(
+                    attempt.accepted_problems / attempt.total_problems * 100,
+                    1,
+                )
+                if attempt.total_problems
+                else 0.0,
+                knowledge_points=knowledge_stats,
+                weak_points=weak_points,
+            )
+        )
+
+    wrong_problems: list[ExamWrongProblemStat] = []
+    for link in problem_links:
+        total_students = 0
+        accepted_students = 0
+        wrong_students = 0
+        for attempt in attempts:
+            status = status_by_user_problem.get(attempt.user_id, {}).get(
+                link.problem_id,
+                "",
+            )
+            if not status:
+                continue
+            total_students += 1
+            if status == "accepted":
+                accepted_students += 1
+            else:
+                wrong_students += 1
+        wrong_problems.append(
+            ExamWrongProblemStat(
+                problem_id=link.problem_id,
+                title=link.problem.title,
+                language=link.problem.language,
+                tags=link.problem.tags,
+                knowledge_points=_problem_tags(link.problem),
+                total_students=total_students,
+                accepted_students=accepted_students,
+                wrong_students=wrong_students,
+            )
+        )
+
+    overall_weak_points = [
+        point
+        for point, value in sorted(overall_point_stats.items())
+        if value["total"]
+        and value["accepted"] / value["total"] < 0.6
+    ]
+    return ExamKnowledgeReportOut(
+        exam_id=exam.id,
+        exam_title=exam.title,
+        students=students,
+        wrong_problems=wrong_problems,
+        weak_points=overall_weak_points,
+    )
+
+
+def _problem_tags(problem: Problem) -> list[str]:
+    return [tag.strip() for tag in problem.tags.split(",") if tag.strip()]
 
 
 @router.get("/exams", response_model=list[StudentExamOut])

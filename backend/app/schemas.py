@@ -283,6 +283,44 @@ class ExamResultOut(BaseModel):
     switch_count: int = 0
 
 
+class ExamKnowledgeStat(BaseModel):
+    knowledge_point: str
+    total_problems: int = 0
+    accepted_problems: int = 0
+    pass_rate: float = 0.0
+
+
+class StudentKnowledgeRow(BaseModel):
+    user_id: int
+    username: str
+    class_name: str = ""
+    score: Optional[int] = None
+    total_problems: int = 0
+    accepted_problems: int = 0
+    pass_rate: float = 0.0
+    knowledge_points: list[ExamKnowledgeStat] = []
+    weak_points: list[str] = []
+
+
+class ExamWrongProblemStat(BaseModel):
+    problem_id: int
+    title: str
+    language: str
+    tags: str
+    knowledge_points: list[str] = []
+    total_students: int = 0
+    accepted_students: int = 0
+    wrong_students: int = 0
+
+
+class ExamKnowledgeReportOut(BaseModel):
+    exam_id: int
+    exam_title: str
+    students: list[StudentKnowledgeRow] = []
+    wrong_problems: list[ExamWrongProblemStat] = []
+    weak_points: list[str] = []
+
+
 class AuthResponse(BaseModel):
     token: str
     user: UserOut

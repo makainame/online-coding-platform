@@ -17,6 +17,9 @@ const results = ref([]);
 const resultExam = ref(null);
 const resultLoading = ref(false);
 const exporting = ref(false);
+const reportVisible = ref(false);
+const report = ref(null);
+const reportLoading = ref(false);
 const previewVisible = ref(false);
 const previewData = ref(null);
 const previewLoading = ref(false);
@@ -394,6 +397,21 @@ async function exportResults() {
   }
 }
 
+async function showReport(row) {
+  reportVisible.value = true;
+  reportLoading.value = true;
+  report.value = null;
+  try {
+    const { data } = await api.get(`/admin/exams/${row.id}/knowledge-report`);
+    report.value = data;
+  } catch (error) {
+    ElMessage.error(error.response?.data?.detail || "加载学情报告失败");
+    reportVisible.value = false;
+  } finally {
+    reportLoading.value = false;
+  }
+}
+
 function formatTime(value) {
   return value ? new Date(value).toLocaleString() : "-";
 }
@@ -459,6 +477,7 @@ onMounted(loadAll);
             <el-button link type="primary" @click="openPreview(row)">预览</el-button>
             <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
             <el-button link type="primary" @click="showResults(row)">成绩</el-button>
+            <el-button link type="primary" @click="showReport(row)">学情报告</el-button>
             <el-button link type="warning" @click="toggleStatus(row)">
               {{ row.status === "published" ? "关闭" : "发布" }}
             </el-button>
@@ -702,6 +721,69 @@ onMounted(loadAll);
     </template>
   </el-dialog>
 
+  <el-dialog v-model="reportVisible" title="学情报告" width="920px">
+    <div v-loading="reportLoading">
+      <template v-if="report">
+        <div class="report-head">
+          <div>
+            <h3>{{ report.exam_title }}</h3>
+            <p>共 {{ report.students.length }} 人参加，{{ report.weak_points.length }} 个薄弱知识点</p>
+          </div>
+          <div v-if="report.weak_points.length" class="weak-tags">
+            <span>薄弱知识点</span>
+            <el-tag
+              v-for="point in report.weak_points"
+              :key="point"
+              type="danger"
+              effect="plain"
+            >
+              {{ point }}
+            </el-tag>
+          </div>
+        </div>
+
+        <el-table :data="report.students" row-key="user_id">
+          <el-table-column prop="username" label="学生" min-width="140" />
+          <el-table-column prop="class_name" label="班级" min-width="120">
+            <template #default="{ row }">{{ row.class_name || "未分班" }}</template>
+          </el-table-column>
+          <el-table-column label="得分" width="90">
+            <template #default="{ row }">{{ row.score ?? "-" }}</template>
+          </el-table-column>
+          <el-table-column label="通过率" width="100">
+            <template #default="{ row }">{{ row.pass_rate }}%</template>
+          </el-table-column>
+          <el-table-column label="薄弱知识点" min-width="260">
+            <template #default="{ row }">
+              <template v-if="row.weak_points?.length">
+                <el-tag
+                  v-for="point in row.weak_points"
+                  :key="point"
+                  type="warning"
+                  effect="plain"
+                  class="weak-tag"
+                >
+                  {{ point }}
+                </el-tag>
+              </template>
+              <span v-else class="muted">无明显薄弱点</span>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <h3 class="report-subtitle">错题统计</h3>
+        <el-table :data="report.wrong_problems" row-key="problem_id">
+          <el-table-column prop="title" label="题目" min-width="220" />
+          <el-table-column prop="language" label="语言" width="110" />
+          <el-table-column prop="tags" label="知识点" min-width="220" />
+          <el-table-column prop="accepted_students" label="通过人数" width="110" />
+          <el-table-column prop="wrong_students" label="未通过人数" width="110" />
+          <el-table-column prop="total_students" label="答题人数" width="100" />
+        </el-table>
+      </template>
+    </div>
+  </el-dialog>
+
   <el-dialog v-model="previewVisible" title="考试预览" width="900px">
     <div v-loading="previewLoading">
       <template v-if="previewData">
@@ -891,5 +973,49 @@ onMounted(loadAll);
 .guard-count {
   color: #b45309;
   font-weight: 700;
+}
+
+.report-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.report-head h3 {
+  margin: 0 0 6px;
+  font-size: 18px;
+}
+
+.report-head p {
+  margin: 0;
+  color: #64748b;
+}
+
+.weak-tags {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.weak-tags > span {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.weak-tag {
+  margin-right: 6px;
+}
+
+.report-subtitle {
+  margin: 18px 0 10px;
+  font-size: 16px;
+}
+
+.muted {
+  color: #94a3b8;
 }
 </style>

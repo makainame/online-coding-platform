@@ -803,6 +803,17 @@ def test_student_exam_flow_and_score(client):
     assert exported.status_code == 200
     assert exported.json()[0]["problem_statuses"][str(problem["id"])] == "accepted"
 
+    report = client.get(
+        f"/api/admin/exams/{exam['id']}/knowledge-report",
+        headers=teacher_headers,
+    )
+    assert report.status_code == 200
+    report_data = report.json()
+    assert report_data["exam_title"] == "学生考试流程"
+    assert len(report_data["students"]) == 1
+    assert report_data["students"][0]["username"] == "student"
+    assert report_data["wrong_problems"][0]["accepted_students"] == 1
+
 
 def test_student_exam_submission_requires_start(client):
     student_headers = login(client)
