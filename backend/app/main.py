@@ -104,6 +104,26 @@ def ensure_schema() -> None:
                         "ADD COLUMN score INTEGER"
                     )
                 )
+    if "exam_attempts" in inspector.get_table_names():
+        exam_attempt_columns = [
+            column["name"] for column in inspector.get_columns("exam_attempts")
+        ]
+        if "paste_count" not in exam_attempt_columns:
+            with engine.begin() as connection:
+                connection.execute(
+                    text(
+                        "ALTER TABLE exam_attempts "
+                        "ADD COLUMN paste_count INTEGER NOT NULL DEFAULT 0"
+                    )
+                )
+        if "switch_count" not in exam_attempt_columns:
+            with engine.begin() as connection:
+                connection.execute(
+                    text(
+                        "ALTER TABLE exam_attempts "
+                        "ADD COLUMN switch_count INTEGER NOT NULL DEFAULT 0"
+                    )
+                )
 
 
 ensure_schema()

@@ -17,6 +17,8 @@ const running = ref(false);
 const submitting = ref(false);
 const submittingExam = ref(false);
 const timerText = ref("");
+const pasteCount = ref(0);
+const switchCount = ref(0);
 let saveTimer = null;
 let timerInterval = null;
 let autoSubmitted = false;
@@ -103,6 +105,70 @@ async function startExam() {
   }
 }
 
+function isExamEditorTarget(target) {
+  return (
+    target &&
+    typeof target.closest === "function" &&
+    (target.closest(".editor-shell") || target.closest(".monaco-editor"))
+  );
+}
+
+function handlePaste(event) {
+  if (exam.value?.attempt_status !== "in_progress") return;
+  if (!isExamEditorTarget(event.target)) return;
+  event.preventDefault();
+  pasteCount.value += 1;
+  ElMessage.warning("考试模式已禁止粘贴代码");
+}
+
+function handleDrop(event) {
+  if (exam.value?.attempt_status !== "in_progress") return;
+  if (!isExamEditorTarget(event.target)) return;
+  event.preventDefault();
+  pasteCount.value += 1;
+  ElMessage.warning("考试模式已禁止拖入代码");
+}
+
+function handleContextMenu(event) {
+  if (exam.value?.attempt_status !== "in_progress") return;
+  if (isExamEditorTarget(event.target)) {
+    event.preventDefault();
+  }
+}
+
+function trackSwitch() {
+  if (exam.value?.attempt_status !== "in_progress") return;
+  switchCount.value += 1;
+}
+
+function handleVisibility() {
+  if (document.hidden) trackSwitch();
+}
+
+function handleBeforeUnload(event) {
+  if (exam.value?.attempt_status !== "in_progress") return;
+  event.preventDefault();
+  event.returnValue = "";
+}
+
+function enableExamGuard() {
+  document.addEventListener("paste", handlePaste, true);
+  document.addEventListener("drop", handleDrop, true);
+  document.addEventListener("contextmenu", handleContextMenu, true);
+  window.addEventListener("blur", trackSwitch);
+  document.addEventListener("visibilitychange", handleVisibility);
+  window.addEventListener("beforeunload", handleBeforeUnload);
+}
+
+function disableExamGuard() {
+  document.removeEventListener("paste", handlePaste, true);
+  document.removeEventListener("drop", handleDrop, true);
+  document.removeEventListener("contextmenu", handleContextMenu, true);
+  window.removeEventListener("blur", trackSwitch);
+  document.removeEventListener("visibilitychange", handleVisibility);
+  window.removeEventListener("beforeunload", handleBeforeUnload);
+}
+
 async function runCode() {
   const problem = currentProblem.value;
   if (!problem) return;
@@ -164,7 +230,10 @@ async function submitExam(force = false) {
   submittingExam.value = true;
   try {
     await saveDraft();
-    const { data } = await api.post(`/exams/${exam.value.id}/submit`);
+    const { data } = await api.post(`/exams/${exam.value.id}/submit`, {
+      paste_count: pasteCount.value,
+      switch_count: switchCount.value,
+    });
     ElMessage.success(`交卷成功：${data.score} 分`);
     await loadExam();
   } catch (error) {
@@ -219,8 +288,12 @@ watch(code, () => {
   saveTimer = setTimeout(saveDraft, 800);
 });
 
-onMounted(loadExam);
+onMounted(() => {
+  enableExamGuard();
+  loadExam();
+});
 onBeforeUnmount(() => {
+  disableExamGuard();
   clearTimeout(saveTimer);
   clearInterval(timerInterval);
 });
@@ -236,6 +309,12 @@ onBeforeUnmount(() => {
       <div v-if="exam.attempt_status === 'in_progress'" class="exam-timer">
         <span>剩余时间</span>
         <strong>{{ timerText }}</strong>
+        <span
+          v-if="pasteCount || switchCount"
+          class="exam-guard-tip"
+        >
+          粘贴 {{ pasteCount }} · 切屏 {{ switchCount }}
+        </span>
         <el-button type="danger" :loading="submittingExam" @click="submitExam()">
           交卷
         </el-button>
@@ -408,6 +487,15 @@ onBeforeUnmount(() => {
   font-size: 22px;
   color: #176b5b;
   font-variant-numeric: tabular-nums;
+}
+
+.exam-guard-tip {
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #fff7ed;
+  color: #b45309;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .stats-grid {

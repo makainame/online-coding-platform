@@ -333,6 +333,8 @@ async function exportResults() {
       "班级",
       "邮箱",
       "状态",
+      "粘贴次数",
+      "切屏次数",
       "得分",
       "通过题数",
       "总题数",
@@ -348,6 +350,8 @@ async function exportResults() {
       row.class_name || "",
       row.email || "",
       row.status,
+      row.paste_count ?? 0,
+      row.switch_count ?? 0,
       row.score ?? "",
       row.accepted_problems,
       row.total_problems,
@@ -368,6 +372,8 @@ async function exportResults() {
       { wch: 16 },
       { wch: 26 },
       { wch: 12 },
+      { wch: 10 },
+      { wch: 10 },
       { wch: 10 },
       { wch: 10 },
       { wch: 10 },
@@ -665,6 +671,20 @@ onMounted(loadAll);
         <template #default="{ row }">{{ row.class_name || "未分班" }}</template>
       </el-table-column>
       <el-table-column prop="status" label="状态" width="120" />
+      <el-table-column label="粘贴" width="80">
+        <template #default="{ row }">
+          <span :class="{ 'guard-count': row.paste_count > 0 }">
+            {{ row.paste_count ?? 0 }}
+          </span>
+        </template>
+      </el-table-column>
+      <el-table-column label="切屏" width="80">
+        <template #default="{ row }">
+          <span :class="{ 'guard-count': row.switch_count > 0 }">
+            {{ row.switch_count ?? 0 }}
+          </span>
+        </template>
+      </el-table-column>
       <el-table-column prop="score" label="得分" width="100">
         <template #default="{ row }">{{ row.score ?? "-" }}</template>
       </el-table-column>
@@ -866,5 +886,10 @@ onMounted(loadAll);
   font-family: "Cascadia Code", Consolas, monospace;
   font-size: 13px;
   line-height: 1.55;
+}
+
+.guard-count {
+  color: #b45309;
+  font-weight: 700;
 }
 </style>

@@ -28,6 +28,7 @@ from ..schemas import (
     ExamStageCreate,
     ExamStartOut,
     ExamSubmitOut,
+    ExamSubmitRequest,
     ExamUpdate,
     ExamProblemTestCase,
     StudentExamDetail,
@@ -635,6 +636,8 @@ def get_exam_results(
             accepted_problems=attempt.accepted_problems,
             started_at=attempt.started_at,
             submitted_at=attempt.submitted_at,
+            paste_count=attempt.paste_count,
+            switch_count=attempt.switch_count,
             problem_statuses={
                 str(problem_link.problem_id): status_by_user_problem.get(
                     attempt.user_id,
@@ -791,6 +794,7 @@ def submit_exam(
     exam_id: int,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
+    payload: ExamSubmitRequest | None = None,
 ) -> ExamSubmitOut:
     exam = db.query(Exam).filter(Exam.id == exam_id).first()
     if exam is None:
@@ -802,6 +806,7 @@ def submit_exam(
     )
     if attempt is None:
         raise HTTPException(status_code=400, detail="请先开始考试")
+    metrics = payload or ExamSubmitRequest()
     if attempt.status == "submitted":
         return ExamSubmitOut(
             status=attempt.status,
@@ -809,6 +814,8 @@ def submit_exam(
             total_problems=attempt.total_problems,
             accepted_problems=attempt.accepted_problems,
             submitted_at=attempt.submitted_at,
+            paste_count=attempt.paste_count,
+            switch_count=attempt.switch_count,
         )
 
     submissions = (
@@ -840,6 +847,8 @@ def submit_exam(
     attempt.score = round(accepted_score / total_score * 100) if total_score else 0
     attempt.accepted_problems = accepted_problems
     attempt.total_problems = problem_count
+    attempt.paste_count = metrics.paste_count
+    attempt.switch_count = metrics.switch_count
     db.commit()
     db.refresh(attempt)
     return ExamSubmitOut(
@@ -848,4 +857,6 @@ def submit_exam(
         total_problems=attempt.total_problems,
         accepted_problems=attempt.accepted_problems,
         submitted_at=attempt.submitted_at,
+        paste_count=attempt.paste_count,
+        switch_count=attempt.switch_count,
     )

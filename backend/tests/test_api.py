@@ -764,11 +764,14 @@ def test_student_exam_flow_and_score(client):
     finished = client.post(
         f"/api/exams/{exam['id']}/submit",
         headers=student_headers,
+        json={"paste_count": 2, "switch_count": 1},
     )
     assert finished.status_code == 200
     assert finished.json()["score"] == 100
     assert finished.json()["accepted_problems"] == 1
     assert finished.json()["total_problems"] == 1
+    assert finished.json()["paste_count"] == 2
+    assert finished.json()["switch_count"] == 1
 
     detail = client.get(
         f"/api/exams/{exam['id']}",
@@ -789,6 +792,8 @@ def test_student_exam_flow_and_score(client):
     assert results.status_code == 200
     assert results.json()[0]["username"] == "student"
     assert results.json()[0]["score"] == 100
+    assert results.json()[0]["paste_count"] == 2
+    assert results.json()[0]["switch_count"] == 1
     assert results.json()[0]["problem_statuses"][str(problem["id"])] == "accepted"
 
     exported = client.get(

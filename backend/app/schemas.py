@@ -258,6 +258,13 @@ class ExamSubmitOut(BaseModel):
     total_problems: int
     accepted_problems: int
     submitted_at: object
+    paste_count: int = 0
+    switch_count: int = 0
+
+
+class ExamSubmitRequest(BaseModel):
+    paste_count: int = Field(default=0, ge=0, le=100000)
+    switch_count: int = Field(default=0, ge=0, le=100000)
 
 
 class ExamResultOut(BaseModel):
@@ -272,6 +279,8 @@ class ExamResultOut(BaseModel):
     started_at: object
     submitted_at: object = None
     problem_statuses: dict[str, str] = {}
+    paste_count: int = 0
+    switch_count: int = 0
 
 
 class AuthResponse(BaseModel):

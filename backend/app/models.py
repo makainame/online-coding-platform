@@ -183,6 +183,8 @@ class ExamAttempt(Base):
     score = Column(Integer, nullable=True)
     total_problems = Column(Integer, nullable=False, default=0)
     accepted_problems = Column(Integer, nullable=False, default=0)
+    paste_count = Column(Integer, nullable=False, default=0)
+    switch_count = Column(Integer, nullable=False, default=0)
 
     exam = relationship("Exam", back_populates="attempts")
     user = relationship("User")
