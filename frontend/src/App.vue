@@ -1,8 +1,9 @@
 <script setup>
-import { onMounted, reactive, ref, watch } from "vue";
+import { computed, onMounted, reactive, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import {
+  ArrowLeft,
   Cpu,
   Key,
   Link,
@@ -15,6 +16,7 @@ import api from "./api";
 import { pageLoading } from "./loading";
 
 const router = useRouter();
+const route = useRoute();
 const user = ref(null);
 const showAuth = ref(false);
 const authMode = ref("login");
@@ -32,6 +34,7 @@ const form = reactive({
   avatar_base64: "",
 });
 const avatarPreview = ref("");
+const showBack = computed(() => route.name !== "home");
 
 const AI_PRESETS = {
   deepseek: {
@@ -130,6 +133,14 @@ function logout() {
   router.push("/");
 }
 
+function goBack() {
+  if (window.history.length > 1) {
+    router.back();
+  } else {
+    router.push("/");
+  }
+}
+
 onMounted(async () => {
   pageLoading.value = true;
   await loadUser();
@@ -192,6 +203,18 @@ onMounted(async () => {
     </header>
 
     <main class="main-content">
+      <div v-if="showBack" class="global-back">
+        <el-tooltip content="返回" placement="top">
+          <el-button
+            :icon="ArrowLeft"
+            circle
+            plain
+            type="primary"
+            aria-label="返回"
+            @click="goBack"
+          />
+        </el-tooltip>
+      </div>
       <router-view :key="$route.fullPath" />
     </main>
   </div>

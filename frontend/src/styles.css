@@ -133,6 +133,10 @@ button {
   padding: 22px 28px 48px;
 }
 
+.global-back {
+  margin-bottom: 12px;
+}
+
 .page {
   display: flex;
   flex-direction: column;
@@ -301,4 +305,3 @@ button {
     height: 360px;
   }
 }
-

@@ -1,13 +1,11 @@
 <script setup>
 import { onMounted, ref, watch } from "vue";
-import { useRoute, useRouter } from "vue-router";
-import { ArrowLeft } from "@element-plus/icons-vue";
+import { useRoute } from "vue-router";
 import api from "../api";
 import CodeEditor from "../components/CodeEditor.vue";
 import { formatRichText } from "../format";
 
 const route = useRoute();
-const router = useRouter();
 const problem = ref(null);
 const DEFAULT_CODE = `def solve():
     data = input().strip()
@@ -141,27 +139,10 @@ async function loadFeedback(submissionId) {
   }
 }
 
-function goBack() {
-  router.push("/");
-}
-
 onMounted(loadProblem);
 </script>
 
 <template>
-  <div class="problem-nav">
-    <el-tooltip content="返回题库" placement="top">
-      <el-button
-        :icon="ArrowLeft"
-        circle
-        plain
-        type="primary"
-        aria-label="返回题库"
-        @click="goBack"
-      />
-    </el-tooltip>
-  </div>
-
   <div v-if="problem" class="work-grid">
     <section class="work-panel">
       <div class="problem-meta">
@@ -261,10 +242,6 @@ onMounted(loadProblem);
 </template>
 
 <style scoped>
-.problem-nav {
-  margin-bottom: 12px;
-}
-
 .draft-status {
   color: #64748b;
   font-size: 12px;
