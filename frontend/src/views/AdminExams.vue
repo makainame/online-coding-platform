@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
+import { ArrowDown } from "@element-plus/icons-vue";
 import * as XLSX from "xlsx";
 import api from "../api";
 import { formatRichText } from "../format";
@@ -412,6 +413,15 @@ async function showReport(row) {
   }
 }
 
+function handleAction(command, row) {
+  if (command === "preview") openPreview(row);
+  if (command === "edit") openEdit(row);
+  if (command === "results") showResults(row);
+  if (command === "report") showReport(row);
+  if (command === "toggle") toggleStatus(row);
+  if (command === "delete") deleteExam(row);
+}
+
 function formatTime(value) {
   return value ? new Date(value).toLocaleString() : "-";
 }
@@ -472,16 +482,31 @@ onMounted(loadAll);
         <el-table-column label="创建时间" min-width="180">
           <template #default="{ row }">{{ formatTime(row.created_at) }}</template>
         </el-table-column>
-        <el-table-column label="操作" min-width="260" fixed="right">
+        <el-table-column label="操作" width="110" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" @click="openPreview(row)">预览</el-button>
-            <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
-            <el-button link type="primary" @click="showResults(row)">成绩</el-button>
-            <el-button link type="primary" @click="showReport(row)">学情报告</el-button>
-            <el-button link type="warning" @click="toggleStatus(row)">
-              {{ row.status === "published" ? "关闭" : "发布" }}
-            </el-button>
-            <el-button link type="danger" @click="deleteExam(row)">删除</el-button>
+            <el-dropdown
+              trigger="click"
+              @command="(command) => handleAction(command, row)"
+            >
+              <el-button link type="primary">
+                操作
+                <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="preview">预览</el-dropdown-item>
+                  <el-dropdown-item command="edit">编辑</el-dropdown-item>
+                  <el-dropdown-item command="results">成绩</el-dropdown-item>
+                  <el-dropdown-item command="report">学情报告</el-dropdown-item>
+                  <el-dropdown-item command="toggle" divided>
+                    {{ row.status === "published" ? "关闭考试" : "发布考试" }}
+                  </el-dropdown-item>
+                  <el-dropdown-item command="delete" divided class="danger-action">
+                    删除
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </template>
         </el-table-column>
       </el-table>
@@ -1017,5 +1042,9 @@ onMounted(loadAll);
 
 .muted {
   color: #94a3b8;
+}
+
+:deep(.danger-action) {
+  color: #dc2626;
 }
 </style>
