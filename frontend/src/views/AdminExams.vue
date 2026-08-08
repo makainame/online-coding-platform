@@ -21,6 +21,31 @@ const exporting = ref(false);
 const reportVisible = ref(false);
 const report = ref(null);
 const reportLoading = ref(false);
+const reportMetrics = computed(() => {
+  const students = report.value?.students || [];
+  const wrongProblems = report.value?.wrong_problems || [];
+  const scores = students
+    .map((item) => item.score)
+    .filter((value) => typeof value === "number" && Number.isFinite(value));
+  const avgScore = scores.length
+    ? (scores.reduce((sum, value) => sum + value, 0) / scores.length).toFixed(1)
+    : "-";
+  const avgPassRate = students.length
+    ? (
+        students.reduce((sum, item) => sum + (Number(item.pass_rate) || 0), 0) /
+        students.length
+      ).toFixed(1)
+    : "-";
+  return {
+    studentCount: students.length,
+    weakPointCount: report.value?.weak_points?.length || 0,
+    wrongProblemCount: wrongProblems.filter(
+      (item) => Number(item.wrong_students) > 0,
+    ).length,
+    avgScore,
+    avgPassRate,
+  };
+});
 const previewVisible = ref(false);
 const previewData = ref(null);
 const previewLoading = ref(false);
@@ -413,6 +438,26 @@ async function showReport(row) {
   }
 }
 
+function passRateType(value) {
+  const rate = Number(value) || 0;
+  if (rate >= 80) return "success";
+  if (rate >= 60) return "warning";
+  return "danger";
+}
+
+function sharePercent(value, total) {
+  if (!total) return "0%";
+  return `${Math.min(Math.max(Math.round((Number(value) || 0) / total * 100), 0), 100)}%`;
+}
+
+function problemTags(row) {
+  if (row.knowledge_points?.length) return row.knowledge_points;
+  return String(row.tags || "")
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+}
+
 function handleAction(command, row) {
   if (command === "preview") openPreview(row);
   if (command === "edit") openEdit(row);
@@ -746,13 +791,18 @@ onMounted(loadAll);
     </template>
   </el-dialog>
 
-  <el-dialog v-model="reportVisible" title="学情报告" width="920px">
-    <div v-loading="reportLoading">
+  <el-dialog
+    v-model="reportVisible"
+    title="学情报告"
+    width="min(1000px, 94vw)"
+    class="report-dialog"
+  >
+    <div v-loading="reportLoading" class="report-body">
       <template v-if="report">
         <div class="report-head">
-          <div>
+          <div class="report-head-main">
             <h3>{{ report.exam_title }}</h3>
-            <p>共 {{ report.students.length }} 人参加，{{ report.weak_points.length }} 个薄弱知识点</p>
+            <p>共 {{ reportMetrics.studentCount }} 人参加</p>
           </div>
           <div v-if="report.weak_points.length" class="weak-tags">
             <span>薄弱知识点</span>
@@ -767,44 +817,134 @@ onMounted(loadAll);
           </div>
         </div>
 
-        <el-table :data="report.students" row-key="user_id">
-          <el-table-column prop="username" label="学生" min-width="140" />
-          <el-table-column prop="class_name" label="班级" min-width="120">
-            <template #default="{ row }">{{ row.class_name || "未分班" }}</template>
-          </el-table-column>
-          <el-table-column label="得分" width="90">
-            <template #default="{ row }">{{ row.score ?? "-" }}</template>
-          </el-table-column>
-          <el-table-column label="通过率" width="100">
-            <template #default="{ row }">{{ row.pass_rate }}%</template>
-          </el-table-column>
-          <el-table-column label="薄弱知识点" min-width="260">
-            <template #default="{ row }">
-              <template v-if="row.weak_points?.length">
-                <el-tag
-                  v-for="point in row.weak_points"
-                  :key="point"
-                  type="warning"
-                  effect="plain"
-                  class="weak-tag"
-                >
-                  {{ point }}
-                </el-tag>
-              </template>
-              <span v-else class="muted">无明显薄弱点</span>
-            </template>
-          </el-table-column>
-        </el-table>
+        <div class="report-metrics">
+          <div class="metric-card">
+            <span>参加人数</span>
+            <strong>{{ reportMetrics.studentCount }}</strong>
+          </div>
+          <div class="metric-card">
+            <span>薄弱知识点</span>
+            <strong>{{ reportMetrics.weakPointCount }}</strong>
+          </div>
+          <div class="metric-card">
+            <span>平均得分</span>
+            <strong>{{ reportMetrics.avgScore }}</strong>
+          </div>
+          <div class="metric-card">
+            <span>平均通过率</span>
+            <strong>
+              {{ reportMetrics.avgPassRate === "-" ? "-" : `${reportMetrics.avgPassRate}%` }}
+            </strong>
+          </div>
+        </div>
 
-        <h3 class="report-subtitle">错题统计</h3>
-        <el-table :data="report.wrong_problems" row-key="problem_id">
-          <el-table-column prop="title" label="题目" min-width="220" />
-          <el-table-column prop="language" label="语言" width="110" />
-          <el-table-column prop="tags" label="知识点" min-width="220" />
-          <el-table-column prop="accepted_students" label="通过人数" width="110" />
-          <el-table-column prop="wrong_students" label="未通过人数" width="110" />
-          <el-table-column prop="total_students" label="答题人数" width="100" />
-        </el-table>
+        <section class="report-section">
+          <div class="section-head">
+            <h3>学生成绩</h3>
+            <span>{{ report.students.length }} 名学生</span>
+          </div>
+          <el-table
+            :data="report.students"
+            row-key="user_id"
+            class="report-table"
+            empty-text="暂无学生成绩"
+          >
+            <el-table-column prop="username" label="学生" min-width="120" show-overflow-tooltip />
+            <el-table-column label="班级" min-width="120">
+              <template #default="{ row }">{{ row.class_name || "未分班" }}</template>
+            </el-table-column>
+            <el-table-column label="得分" width="90">
+              <template #default="{ row }">{{ row.score ?? "-" }}</template>
+            </el-table-column>
+            <el-table-column label="完成情况" width="120">
+              <template #default="{ row }">
+                <span class="answer-count">{{ row.accepted_problems }}/{{ row.total_problems }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="通过率" min-width="150">
+              <template #default="{ row }">
+                <div class="rate-cell">
+                  <div class="rate-track">
+                    <div
+                      class="rate-fill"
+                      :class="`rate-${passRateType(row.pass_rate)}`"
+                      :style="{ width: sharePercent(row.pass_rate, 100) }"
+                    ></div>
+                  </div>
+                  <span>{{ row.pass_rate }}%</span>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column label="薄弱知识点" min-width="240">
+              <template #default="{ row }">
+                <div v-if="row.weak_points?.length" class="tag-list">
+                  <el-tag
+                    v-for="point in row.weak_points"
+                    :key="point"
+                    type="warning"
+                    effect="plain"
+                    class="weak-tag"
+                  >
+                    {{ point }}
+                  </el-tag>
+                </div>
+                <span v-else class="muted">无明显薄弱点</span>
+              </template>
+            </el-table-column>
+          </el-table>
+        </section>
+
+        <section class="report-section">
+          <div class="section-head">
+            <h3>错题统计</h3>
+            <span>{{ reportMetrics.wrongProblemCount }} 道题存在未通过</span>
+          </div>
+          <el-table
+            :data="report.wrong_problems"
+            row-key="problem_id"
+            class="report-table"
+            empty-text="暂无错题记录"
+          >
+            <el-table-column prop="title" label="题目" min-width="240" show-overflow-tooltip />
+            <el-table-column label="知识点" min-width="220">
+              <template #default="{ row }">
+                <div class="tag-list">
+                  <el-tag
+                    v-for="tag in problemTags(row)"
+                    :key="tag"
+                    type="info"
+                    effect="plain"
+                    size="small"
+                    class="point-tag"
+                  >
+                    {{ tag }}
+                  </el-tag>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column prop="language" label="语言" width="100" />
+            <el-table-column label="答题情况" min-width="220">
+              <template #default="{ row }">
+                <div class="answer-cell">
+                  <div class="answer-track">
+                    <div
+                      class="answer-fill passed"
+                      :style="{ width: sharePercent(row.accepted_students, row.total_students) }"
+                    ></div>
+                    <div
+                      class="answer-fill wrong"
+                      :style="{ width: sharePercent(row.wrong_students, row.total_students) }"
+                    ></div>
+                  </div>
+                  <span>
+                    通过 {{ row.accepted_students }} / 未通过 {{ row.wrong_students }} /
+                    共 {{ row.total_students }} 人
+                  </span>
+                </div>
+              </template>
+            </el-table-column>
+          </el-table>
+        </section>
       </template>
     </div>
   </el-dialog>
@@ -1000,17 +1140,35 @@ onMounted(loadAll);
   font-weight: 700;
 }
 
+.report-dialog :deep(.el-dialog__body) {
+  padding: 20px;
+}
+
+.report-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-height: calc(100vh - 190px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
 .report-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 16px;
+  gap: 12px 20px;
+  flex-wrap: wrap;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
 }
 
-.report-head h3 {
+.report-head-main h3 {
   margin: 0 0 6px;
   font-size: 18px;
+  line-height: 1.35;
 }
 
 .report-head p {
@@ -1031,17 +1189,183 @@ onMounted(loadAll);
   font-size: 13px;
 }
 
-.weak-tag {
-  margin-right: 6px;
+.report-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
 }
 
-.report-subtitle {
-  margin: 18px 0 10px;
+.metric-card {
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.metric-card span {
+  display: block;
+  margin-bottom: 6px;
+  color: #64748b;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.metric-card strong {
+  display: block;
+  color: #176b5b;
+  font-size: 24px;
+  line-height: 1.15;
+}
+
+.report-section {
+  min-width: 0;
+}
+
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.section-head h3 {
+  margin: 0;
   font-size: 16px;
+}
+
+.section-head span {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.report-table {
+  width: 100%;
+}
+
+.report-table :deep(.el-table__header th) {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+}
+
+.report-table :deep(.el-table__cell) {
+  padding: 8px 0;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.weak-tag,
+.point-tag {
+  max-width: 100%;
+}
+
+.rate-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.rate-cell > span {
+  min-width: 44px;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.rate-track {
+  width: 90px;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #eef1f4;
+}
+
+.rate-fill {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.rate-success {
+  background: #16a34a;
+}
+
+.rate-warning {
+  background: #d97706;
+}
+
+.rate-danger {
+  background: #dc2626;
+}
+
+.answer-count {
+  color: #334155;
+  font-weight: 600;
+}
+
+.answer-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.answer-cell > span {
+  color: #475569;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.answer-track {
+  display: flex;
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #eef1f4;
+}
+
+.answer-fill {
+  height: 100%;
+}
+
+.answer-fill.passed {
+  background: #16a34a;
+}
+
+.answer-fill.wrong {
+  background: #f97316;
 }
 
 .muted {
   color: #94a3b8;
+}
+
+@media (max-width: 760px) {
+  .report-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .report-head {
+    flex-direction: column;
+  }
+
+  .weak-tags {
+    justify-content: flex-start;
+  }
+
+  .section-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
 }
 
 :deep(.danger-action) {
