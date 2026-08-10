@@ -14,6 +14,30 @@ const DEFAULT_CODE = `def solve():
 
 solve()
 `;
+const BLANK_STARTERS = {
+  python: "# 请根据题目要求完成代码\n",
+  javascript: "// 请根据题目要求完成代码\n",
+  java:
+    "public class Main {\n" +
+    "    public static void main(String[] args) {\n" +
+    "        // 请根据题目要求完成代码\n" +
+    "    }\n" +
+    "}\n",
+  cpp:
+    "#include <iostream>\n" +
+    "\n" +
+    "int main() {\n" +
+    "    // 请根据题目要求完成代码\n" +
+    "    return 0;\n" +
+    "}\n",
+};
+
+function isBlankDraft(code, language) {
+  const value = String(code || "").trim();
+  if (!value) return true;
+  const blank = BLANK_STARTERS[language] || BLANK_STARTERS.python;
+  return value === String(blank).trim();
+}
 const code = ref(DEFAULT_CODE);
 const loading = ref(false);
 const running = ref(false);
@@ -42,7 +66,7 @@ async function loadProblem() {
     }
     try {
       const { data: draft } = await api.get(`/drafts/${route.params.id}`);
-      if (draft.code) {
+      if (draft.code && !isBlankDraft(draft.code, data.language || "python")) {
         code.value = draft.code;
         draftStatus.value = "已加载草稿";
       }
