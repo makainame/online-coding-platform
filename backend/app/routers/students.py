@@ -6,7 +6,17 @@ from sqlalchemy.orm import Session
 
 from ..ai_crypto import encrypt_api_key
 from ..database import get_db
-from ..models import AiSetting, ClassGroup, Problem, Submission, User
+from ..models import (
+    AiSetting,
+    AuthToken,
+    ClassGroup,
+    CodeDraft,
+    ExamAttempt,
+    Feedback,
+    Problem,
+    Submission,
+    User,
+)
 from ..schemas import (
     AdminStatsOut,
     AdminStudentStatOut,
@@ -295,6 +305,52 @@ def import_students(
         skipped=skipped,
         total=len(payload),
     )
+
+
+@router.delete(
+    "/admin/students/{student_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_student(
+    student_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_teacher),
+) -> None:
+    student = (
+        db.query(User)
+        .filter(User.id == student_id, User.role == "student")
+        .first()
+    )
+    if student is None:
+        raise HTTPException(status_code=404, detail="学生账号不存在")
+
+    submission_ids = [
+        submission_id
+        for (submission_id,) in db.query(Submission.id)
+        .filter(Submission.user_id == student_id)
+        .all()
+    ]
+    if submission_ids:
+        db.query(Feedback).filter(
+            Feedback.submission_id.in_(submission_ids)
+        ).delete(synchronize_session=False)
+        db.query(Submission).filter(
+            Submission.id.in_(submission_ids)
+        ).delete(synchronize_session=False)
+    db.query(ExamAttempt).filter(
+        ExamAttempt.user_id == student_id
+    ).delete(synchronize_session=False)
+    db.query(CodeDraft).filter(
+        CodeDraft.user_id == student_id
+    ).delete(synchronize_session=False)
+    db.query(AuthToken).filter(
+        AuthToken.user_id == student_id
+    ).delete(synchronize_session=False)
+    db.query(AiSetting).filter(
+        AiSetting.user_id == student_id
+    ).delete(synchronize_session=False)
+    db.delete(student)
+    db.commit()
 
 
 @router.put("/admin/students/{student_id}/password", response_model=StudentOut)

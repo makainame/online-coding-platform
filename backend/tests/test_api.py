@@ -440,6 +440,70 @@ def test_teacher_can_create_and_reset_student(client):
     assert any(item["username"] == "managed_student" for item in students.json())
 
 
+def test_teacher_can_delete_student_and_cleanup(client):
+    teacher_headers = login(client, username="teacher", password="teacher123")
+    created = client.post(
+        "/api/admin/students",
+        headers=teacher_headers,
+        json={
+            "username": "deletable_student",
+            "password": "init123456",
+            "email": "delete@example.com",
+            "ai_api_key": "test-key-123456",
+        },
+    )
+    assert created.status_code == 201
+    student_id = created.json()["id"]
+
+    student_headers = login(
+        client,
+        username="deletable_student",
+        password="init123456",
+    )
+    problem = client.get("/api/problems", headers=student_headers).json()[0]
+    draft = client.put(
+        f"/api/drafts/{problem['id']}",
+        headers=student_headers,
+        json={"code": "value = 1\n", "language": "python"},
+    )
+    assert draft.status_code == 200
+    submission = client.post(
+        "/api/submissions",
+        headers=student_headers,
+        json={
+            "problem_id": problem["id"],
+            "code": "print(1)",
+            "language": "python",
+        },
+    )
+    assert submission.status_code == 201
+
+    deleted = client.delete(
+        f"/api/admin/students/{student_id}",
+        headers=teacher_headers,
+    )
+    assert deleted.status_code == 204
+
+    students = client.get("/api/admin/students", headers=teacher_headers)
+    assert students.status_code == 200
+    assert all(
+        item["username"] != "deletable_student"
+        for item in students.json()
+    )
+
+    login_after_delete = client.post(
+        "/api/auth/login",
+        json={"username": "deletable_student", "password": "init123456"},
+    )
+    assert login_after_delete.status_code == 401
+
+    missing = client.delete(
+        f"/api/admin/students/{student_id}",
+        headers=teacher_headers,
+    )
+    assert missing.status_code == 404
+
+
 def test_teacher_import_students(client):
     headers = login(client, username="teacher", password="teacher123")
     payload = [

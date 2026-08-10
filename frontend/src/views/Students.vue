@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, reactive, ref } from "vue";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 import * as XLSX from "xlsx";
 import api from "../api";
 
@@ -11,6 +11,7 @@ const createVisible = ref(false);
 const importVisible = ref(false);
 const resetVisible = ref(false);
 const currentStudent = ref(null);
+const deletingId = ref(null);
 const fileInput = ref(null);
 const importing = ref(false);
 const importJson = ref(`[
@@ -152,6 +153,33 @@ async function resetPassword() {
   }
 }
 
+async function deleteStudent(student) {
+  try {
+    await ElMessageBox.confirm(
+      `确定删除学生“${student.username}”吗？删除后该学生的 AI 配置、草稿、提交、反馈和考试记录都会清除。`,
+      "删除学生",
+      {
+        type: "warning",
+        confirmButtonText: "确认",
+        cancelButtonText: "取消",
+      },
+    );
+  } catch {
+    return;
+  }
+
+  deletingId.value = student.id;
+  try {
+    await api.delete(`/admin/students/${student.id}`);
+    ElMessage.success("学生账号已删除");
+    await loadStudents();
+  } catch (error) {
+    ElMessage.error(error.response?.data?.detail || "删除失败");
+  } finally {
+    deletingId.value = null;
+  }
+}
+
 function formatTime(value) {
   return value ? new Date(value).toLocaleString() : "-";
 }
@@ -194,9 +222,17 @@ onMounted(loadStudents);
         </el-table-column>
         <el-table-column prop="submission_count" label="提交数" width="100" />
         <el-table-column prop="accepted_count" label="通过数" width="100" />
-        <el-table-column label="操作" width="120">
+        <el-table-column label="操作" width="180">
           <template #default="{ row }">
             <el-button link type="primary" @click="openReset(row)">重置密码</el-button>
+            <el-button
+              link
+              type="danger"
+              :loading="deletingId === row.id"
+              @click="deleteStudent(row)"
+            >
+              删除
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
