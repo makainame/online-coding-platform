@@ -14,10 +14,12 @@ cd "$APP_DIR"
 echo "==> 构建并启动服务"
 docker compose up -d --build
 
+echo "==> 刷新前端代理，避免后端容器 IP 变化后仍请求旧地址"
+docker compose restart frontend
+
 echo "==> 服务状态"
 docker compose ps
 
 echo "==> 本地访问"
 echo "前端:  http://127.0.0.1:8080"
 echo "后端:  http://127.0.0.1:8000"
-
