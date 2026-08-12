@@ -435,6 +435,11 @@ class SubmissionOut(BaseModel):
     created_at: object
 
 
+class SubmissionListOut(SubmissionOut):
+    username: str = ""
+    problem_title: str = ""
+
+
 class SubmissionDetail(SubmissionOut):
     results: list[TestResultOut] = []
 

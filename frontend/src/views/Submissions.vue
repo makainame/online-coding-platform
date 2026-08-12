@@ -26,7 +26,7 @@ const statusType = {
 async function loadSubmissions() {
   loading.value = true;
   try {
-    const { data } = await api.get("/submissions/my");
+    const { data } = await api.get("/submissions");
     submissions.value = data;
   } finally {
     loading.value = false;
@@ -122,7 +122,13 @@ onMounted(() => {
     <div class="panel">
       <el-table v-loading="loading" :data="submissions" row-key="id">
         <el-table-column prop="id" label="#" width="80" />
-        <el-table-column prop="problem_id" label="题目 ID" width="110" />
+        <el-table-column prop="username" label="学生" min-width="120" />
+        <el-table-column
+          prop="problem_title"
+          label="题目"
+          min-width="220"
+          show-overflow-tooltip
+        />
         <el-table-column prop="language" label="语言" width="110" />
         <el-table-column label="状态" width="130">
           <template #default="{ row }">

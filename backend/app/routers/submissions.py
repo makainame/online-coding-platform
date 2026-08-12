@@ -11,6 +11,7 @@ from ..schemas import (
     FeedbackOut,
     SubmissionCreate,
     SubmissionDetail,
+    SubmissionListOut,
     SubmissionOut,
 )
 from ..security import get_current_user
@@ -33,6 +34,33 @@ def my_submissions(
         .limit(100)
         .all()
     )
+
+
+@router.get("/submissions", response_model=list[SubmissionListOut])
+def list_submissions(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    query = (
+        db.query(Submission, User.username, Problem.title)
+        .join(User, User.id == Submission.user_id)
+        .join(Problem, Problem.id == Submission.problem_id)
+    )
+    if user.role != "teacher":
+        query = query.filter(Submission.user_id == user.id)
+    rows = (
+        query.order_by(Submission.id.desc())
+        .limit(200)
+        .all()
+    )
+    return [
+        SubmissionListOut(
+            **SubmissionOut.model_validate(submission).model_dump(),
+            username=username,
+            problem_title=problem_title,
+        )
+        for submission, username, problem_title in rows
+    ]
 
 
 @router.post("/execute", response_model=ExecuteResultOut)

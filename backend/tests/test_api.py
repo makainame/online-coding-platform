@@ -173,6 +173,35 @@ def test_student_full_flow(client):
     assert feedback_data["score"] == 95.0
 
 
+def test_teacher_submission_list_contains_student_submissions(client):
+    student_headers = login(client)
+    problems = client.get("/api/problems", headers=student_headers).json()
+    problem = next(item for item in problems if item["title"] == "两数之和")
+    submission = client.post(
+        "/api/submissions",
+        headers=student_headers,
+        json={
+            "problem_id": problem["id"],
+            "code": "a, b = map(int, input().split())\nprint(a + b)",
+            "language": "python",
+        },
+    ).json()
+
+    teacher_headers = login(client, username="teacher", password="teacher123")
+    teacher_list = client.get("/api/submissions", headers=teacher_headers)
+    assert teacher_list.status_code == 200
+    assert any(
+        row["id"] == submission["id"]
+        and row["username"] == "student"
+        and row["problem_title"] == "两数之和"
+        for row in teacher_list.json()
+    )
+
+    student_list = client.get("/api/submissions", headers=student_headers)
+    assert student_list.status_code == 200
+    assert any(row["id"] == submission["id"] for row in student_list.json())
+
+
 def test_javascript_problem_is_seeded_with_starter_code(client):
     headers = login(client)
     problems = client.get("/api/problems", headers=headers).json()
