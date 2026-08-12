@@ -180,6 +180,7 @@ async function runCode() {
       problem_id: problem.problem_id,
       code: code.value,
       language: problem.language,
+      mode: "run",
     });
     result.value = data;
   } catch (error) {
@@ -207,7 +208,13 @@ async function submitProblem() {
       exam.value.results[String(problem.problem_id)] =
         data.status === "accepted" ? "accepted" : "submitted";
     }
-    ElMessage.success(`提交结果：${data.status}`);
+    if (data.status === "accepted") {
+      ElMessage.success("提交成功：已通过全部用例");
+    } else if (data.status === "wrong_answer") {
+      ElMessage.warning("提交完成：未通过，请查看下方用例详情");
+    } else {
+      ElMessage.error("提交完成：运行出错，请查看下方错误信息");
+    }
   } catch (error) {
     errorMessage.value = error.response?.data?.detail || error.message;
   } finally {
@@ -428,22 +435,31 @@ onBeforeUnmount(() => {
           </div>
 
           <div v-if="result" class="result-block">
-            <h3>执行结果：{{ result.status }}</h3>
+            <h3>
+              {{ result.status === "success" ? "运行结果" : "执行结果" }}：
+              {{ result.status === "success" ? "运行成功" : result.status }}
+            </h3>
             <div class="case-list">
-              <div
-                v-for="item in result.results"
-                :key="item.case_id"
-                class="case-item"
-                :class="item.passed ? 'passed' : 'failed'"
-              >
-                <div>用例 {{ item.case_id }}：{{ item.passed ? "通过" : "未通过" }}</div>
-                <div>期望：{{ item.expected_output }}</div>
-                <div>实际：{{ item.actual_output || "（无输出）" }}</div>
-                <div v-if="item.error">{{ item.error }}</div>
+              <div v-if="result.status === 'success'" class="case-item passed">
+                <div>实际输出</div>
+                <pre class="run-output">{{ result.results?.[0]?.actual_output || "（无输出）" }}</pre>
               </div>
-              <div v-if="result.error_message" class="case-item failed">
-                {{ result.error_message }}
-              </div>
+              <template v-else>
+                <div
+                  v-for="item in result.results"
+                  :key="item.case_id"
+                  class="case-item"
+                  :class="item.passed ? 'passed' : 'failed'"
+                >
+                  <div>用例 {{ item.case_id }}：{{ item.passed ? "通过" : "未通过" }}</div>
+                  <div>期望：{{ item.expected_output }}</div>
+                  <div>实际：{{ item.actual_output || "（无输出）" }}</div>
+                  <div v-if="item.error">{{ item.error }}</div>
+                </div>
+                <div v-if="result.error_message" class="case-item failed">
+                  {{ result.error_message }}
+                </div>
+              </template>
             </div>
           </div>
         </section>
@@ -557,5 +573,16 @@ onBeforeUnmount(() => {
   border: 1px solid #dde3e8;
   border-radius: 8px;
   overflow: hidden;
+}
+
+.run-output {
+  margin: 0;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border-radius: 6px;
+  white-space: pre-wrap;
+  font-family: Consolas, "Cascadia Code", monospace;
+  font-size: 13px;
+  line-height: 1.6;
 }
 </style>

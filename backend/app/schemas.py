@@ -394,6 +394,7 @@ class ExecuteRequest(BaseModel):
     code: str
     language: str = "python"
     custom_input: Optional[str] = None
+    mode: Literal["run", "test"] = "test"
 
 
 class SubmissionCreate(BaseModel):

@@ -72,8 +72,12 @@ def execute(
     problem = db.query(Problem).filter(Problem.id == payload.problem_id).first()
     if problem is None:
         raise HTTPException(status_code=404, detail="题目不存在")
-    if payload.custom_input is not None:
-        return execute_custom(payload.code, payload.language, payload.custom_input)
+    if payload.mode == "run" or payload.custom_input is not None:
+        return execute_custom(
+            payload.code,
+            payload.language,
+            payload.custom_input or "",
+        )
     return execute_code(payload.code, payload.language, problem.test_cases)
 
 
@@ -87,8 +91,12 @@ def execute_with_feedback(
     if problem is None:
         raise HTTPException(status_code=404, detail="题目不存在")
 
-    if payload.custom_input is not None:
-        result = execute_custom(payload.code, payload.language, payload.custom_input)
+    if payload.mode == "run" or payload.custom_input is not None:
+        result = execute_custom(
+            payload.code,
+            payload.language,
+            payload.custom_input or "",
+        )
     else:
         result = execute_code(payload.code, payload.language, problem.test_cases)
 
@@ -102,7 +110,14 @@ def execute_with_feedback(
         actual_output="\n".join(item.actual_output for item in result.results if item.actual_output),
         error_message=result.error_message,
     )
-    feedback = generate_feedback(db, submission, problem, result, user=user)
+    feedback = generate_feedback(
+        db,
+        submission,
+        problem,
+        result,
+        user=user,
+        run_mode=payload.mode == "run" or payload.custom_input is not None,
+    )
     feedback.id = 0
     feedback.submission_id = 0
     return feedback

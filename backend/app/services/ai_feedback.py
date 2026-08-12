@@ -13,10 +13,17 @@ def _local_feedback(
     problem: Problem,
     result,
     missing_key: bool = False,
+    run_mode: bool = False,
 ) -> Feedback:
     passed_count = sum(1 for item in result.results if item.passed)
     total_count = len(result.results)
-    if result.status == "accepted":
+    if run_mode:
+        score = None
+        if result.status == "success":
+            summary = "运行完成。以下反馈只针对代码执行结果和代码质量，不判断题目是否通过。"
+        else:
+            summary = "运行出现错误，先检查语法、异常和输入处理。"
+    elif result.status == "accepted":
         score = 95.0
         summary = "代码已通过全部测试用例，功能实现正确。"
     elif result.status == "wrong_answer":
@@ -29,8 +36,7 @@ def _local_feedback(
     lines = [
         "未配置自己的 API Key，当前使用本地规则反馈。" if missing_key else "",
         f"题目：{problem.title}",
-        f"状态：{result.status}",
-        f"测试通过：{passed_count}/{total_count}",
+        "状态：运行成功" if run_mode and result.status == "success" else f"状态：{result.status}",
         summary,
         "",
         "改进建议：",
@@ -38,6 +44,8 @@ def _local_feedback(
         "- 如果输出不一致，注意不要混入额外提示文本",
         "- 代码保持函数拆分清晰，变量命名有含义",
     ]
+    if not run_mode:
+        lines.insert(3, f"测试通过：{passed_count}/{total_count}")
     if result.error_message:
         lines.extend(["", "错误信息：", result.error_message])
     return Feedback(
@@ -141,13 +149,21 @@ def generate_feedback(
     problem: Problem,
     result,
     user: User | None = None,
+    run_mode: bool = False,
 ) -> Feedback:
+    mode_instruction = (
+        "\n本次是自由运行模式，不要判定题目是否通过，不要给出通过/未通过或分数；"
+        "只分析代码执行结果、代码质量、潜在错误和可读性。"
+        if run_mode
+        else ""
+    )
     user_prompt = (
         "请以编程教学助手身份分析以下学生代码：\n\n"
         f"题目要求：\n{problem.description}\n\n"
         f"学生代码：\n{submission.code}\n\n"
         f"执行结果：\n{result.model_dump_json() if hasattr(result, 'model_dump_json') else str(result)}\n\n"
         "请从功能正确性、代码质量、性能优化和改进建议四个方面给出中文反馈，语气友好鼓励。"
+        f"{mode_instruction}"
     )
     settings = resolve_user_ai_settings(db, user) if user else None
     if settings:
@@ -157,7 +173,15 @@ def generate_feedback(
                 user_prompt,
                 **settings,
             )
-            score = 95.0 if result.status == "accepted" else (68.0 if result.status == "wrong_answer" else 52.0)
+            score = (
+                None
+                if run_mode
+                else (
+                    95.0
+                    if result.status == "accepted"
+                    else (68.0 if result.status == "wrong_answer" else 52.0)
+                )
+            )
             return Feedback(
                 submission_id=submission.id,
                 feedback_text=text.strip(),
@@ -165,5 +189,11 @@ def generate_feedback(
                 provider=settings["provider"],
             )
         except (urllib.error.URLError, KeyError, IndexError, RuntimeError, ValueError):
-            return _local_feedback(submission, problem, result)
-    return _local_feedback(submission, problem, result, missing_key=True)
+            return _local_feedback(submission, problem, result, run_mode=run_mode)
+    return _local_feedback(
+        submission,
+        problem,
+        result,
+        missing_key=True,
+        run_mode=run_mode,
+    )

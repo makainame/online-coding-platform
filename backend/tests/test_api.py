@@ -311,6 +311,41 @@ def test_custom_execute(client):
     assert data["results"][0]["actual_output"].strip() == "hello"
 
 
+def test_run_mode_does_not_compare_expected_output(client):
+    headers = login(client)
+    problems = client.get("/api/problems", headers=headers).json()
+    problem = next(item for item in problems if item["title"] == "两数之和")
+    response = client.post(
+        "/api/execute",
+        headers=headers,
+        json={
+            "problem_id": problem["id"],
+            "code": "print('hello')\nprint('world')",
+            "language": "python",
+            "mode": "run",
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    assert "hello" in data["results"][0]["actual_output"]
+    assert "world" in data["results"][0]["actual_output"]
+    assert data["results"][0]["expected_output"] == ""
+
+    feedback = client.post(
+        "/api/execute/feedback",
+        headers=headers,
+        json={
+            "problem_id": problem["id"],
+            "code": "print('hello')\nprint('world')",
+            "language": "python",
+            "mode": "run",
+        },
+    )
+    assert feedback.status_code == 200
+    assert feedback.json()["score"] is None
+
+
 def test_execute_with_feedback(client):
     headers = login(client)
     problems = client.get("/api/problems", headers=headers).json()
