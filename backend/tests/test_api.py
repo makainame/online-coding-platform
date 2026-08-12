@@ -201,6 +201,11 @@ def test_teacher_submission_list_contains_student_submissions(client):
     assert student_list.status_code == 200
     assert any(row["id"] == submission["id"] for row in student_list.json())
 
+    teacher_stats = client.get("/api/statistics/me", headers=teacher_headers)
+    assert teacher_stats.status_code == 200
+    assert teacher_stats.json()["total_submissions"] >= 1
+    assert teacher_stats.json()["today_count"] >= 1
+
 
 def test_javascript_problem_is_seeded_with_starter_code(client):
     headers = login(client)

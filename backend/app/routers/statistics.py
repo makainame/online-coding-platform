@@ -17,11 +17,10 @@ def my_statistics(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> UserStatsOut:
-    submissions = (
-        db.query(Submission)
-        .filter(Submission.user_id == user.id)
-        .all()
-    )
+    submissions_query = db.query(Submission)
+    if user.role != "teacher":
+        submissions_query = submissions_query.filter(Submission.user_id == user.id)
+    submissions = submissions_query.all()
     total = len(submissions)
     accepted_count = sum(1 for item in submissions if item.status == "accepted")
     wrong_count = sum(1 for item in submissions if item.status == "wrong_answer")
