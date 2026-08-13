@@ -75,7 +75,7 @@ async function renameClass() {
 async function deleteClass(item) {
   try {
     await ElMessageBox.confirm(
-      `删除“${item.name}”后，该班学生将变为未分班。`,
+      `删除“${item.name}”后，该班学生和关联考试将解除班级限制。`,
       "删除班级",
       {
         type: "warning",

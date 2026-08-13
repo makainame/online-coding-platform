@@ -3,7 +3,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import ClassGroup, Submission, User
+from ..models import ClassGroup, Exam, Submission, User
 from ..schemas import (
     ClassGroupCreate,
     ClassGroupOut,
@@ -142,6 +142,10 @@ def delete_class(
     class_group = db.query(ClassGroup).filter(ClassGroup.id == class_id).first()
     if class_group is None:
         raise HTTPException(status_code=404, detail="班级不存在")
+    db.query(Exam).filter(Exam.class_id == class_id).update(
+        {Exam.class_id: None},
+        synchronize_session=False,
+    )
     db.query(User).filter(User.class_id == class_id).update(
         {User.class_id: None},
         synchronize_session=False,

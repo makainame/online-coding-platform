@@ -689,6 +689,39 @@ def test_teacher_class_management_and_assignment(client):
     assert student_after_delete["class_id"] is None
 
 
+def test_delete_class_unassigns_linked_exam(client):
+    teacher_headers = login(client, username="teacher", password="teacher123")
+    class_group = client.post(
+        "/api/admin/classes",
+        headers=teacher_headers,
+        json={"name": "考试关联班级"},
+    ).json()
+    problems = client.get("/api/problems", headers=teacher_headers).json()
+    problem = next(item for item in problems if item["title"] == "两数之和")
+    exam = client.post(
+        "/api/admin/exams",
+        headers=teacher_headers,
+        json={
+            "title": "关联班级考试",
+            "description": "删除班级时应解除关联",
+            "duration_minutes": 30,
+            "class_id": class_group["id"],
+            "status": "draft",
+            "problem_ids": [problem["id"]],
+        },
+    ).json()
+
+    deleted = client.delete(
+        f"/api/admin/classes/{class_group['id']}",
+        headers=teacher_headers,
+    )
+    assert deleted.status_code == 204
+
+    exams = client.get("/api/admin/exams", headers=teacher_headers).json()
+    exam_after_delete = next(item for item in exams if item["id"] == exam["id"])
+    assert exam_after_delete["class_id"] is None
+
+
 def test_teacher_class_appears_in_stats_and_export(client):
     teacher_headers = login(client, username="teacher", password="teacher123")
     class_group = client.post(
