@@ -211,7 +211,7 @@ onMounted(loadStudents);
 
     <div class="panel">
       <el-table v-loading="loading" :data="students" row-key="id">
-        <el-table-column prop="id" label="#" width="80" />
+        <el-table-column type="index" label="#" width="80" :index="(index) => index + 1" />
         <el-table-column prop="username" label="用户名" min-width="140" />
         <el-table-column prop="class_name" label="班级" min-width="120">
           <template #default="{ row }">{{ row.class_name || "未分班" }}</template>

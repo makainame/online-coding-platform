@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class RegisterRequest(BaseModel):
     username: str = Field(min_length=2, max_length=50)
     password: str = Field(min_length=6, max_length=100)
-    email: Optional[str] = None
+    email: str = Field(min_length=1, max_length=100)
     role: Literal["student", "teacher"] = "student"
     ai_provider: Literal["deepseek", "qwen"] = "deepseek"
     ai_base_url: Optional[str] = None

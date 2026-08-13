@@ -44,6 +44,7 @@ def test_student_requires_ai_key(client):
         json={
             "username": "no_ai_student",
             "password": "secret123",
+            "email": "no-ai@example.com",
             "role": "student",
         },
     )
@@ -56,6 +57,7 @@ def test_public_register_cannot_create_teacher(client):
         json={
             "username": "fake_teacher",
             "password": "secret123",
+            "email": "fake-teacher@example.com",
             "role": "teacher",
         },
     )
@@ -68,12 +70,27 @@ def test_teacher_register_with_code(client):
         json={
             "username": "new_teacher",
             "password": "secret123",
+            "email": "new-teacher@example.com",
             "role": "teacher",
             "teacher_code": "teacher2026",
         },
     )
     assert response.status_code == 200
     assert response.json()["user"]["role"] == "teacher"
+
+
+def test_register_requires_email(client):
+    response = client.post(
+        "/api/auth/register",
+        json={
+            "username": "no_email_student",
+            "password": "secret123",
+            "email": "",
+            "role": "student",
+            "ai_api_key": "test-key-123456",
+        },
+    )
+    assert response.status_code == 422
 
 
 def test_ai_settings_roundtrip(client):

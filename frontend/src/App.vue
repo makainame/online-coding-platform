@@ -21,6 +21,7 @@ const user = ref(null);
 const showAuth = ref(false);
 const authMode = ref("login");
 const loading = ref(false);
+const authFormRef = ref(null);
 const form = reactive({
   username: "student",
   password: "student123",
@@ -35,6 +36,27 @@ const form = reactive({
 });
 const avatarPreview = ref("");
 const showBack = computed(() => route.name !== "home");
+
+const authRules = {
+  username: [
+    { required: true, message: "请输入用户名", trigger: "blur" },
+    { min: 2, message: "用户名至少 2 个字符", trigger: "blur" },
+  ],
+  password: [
+    { required: true, message: "请输入密码", trigger: "blur" },
+    { min: 6, message: "密码至少 6 位", trigger: "blur" },
+  ],
+  email: [
+    { required: true, message: "请输入邮箱", trigger: "blur" },
+    { type: "email", message: "邮箱格式不正确", trigger: "blur" },
+  ],
+  ai_api_key: [
+    { required: true, message: "学生注册必须填写自己的 AI API Key", trigger: "blur" },
+  ],
+  teacher_code: [
+    { required: true, message: "请输入教师授权码", trigger: "blur" },
+  ],
+};
 
 const AI_PRESETS = {
   deepseek: {
@@ -100,6 +122,13 @@ function switchAuth(mode) {
 }
 
 async function submitAuth() {
+  if (authFormRef.value) {
+    try {
+      await authFormRef.value.validate();
+    } catch {
+      return;
+    }
+  }
   loading.value = true;
   try {
     const path = authMode.value === "login" ? "/auth/login" : "/auth/register";
@@ -253,7 +282,13 @@ onMounted(async () => {
       </button>
     </div>
 
-    <el-form label-position="top" class="auth-form">
+    <el-form
+      ref="authFormRef"
+      :model="form"
+      :rules="authRules"
+      label-position="top"
+      class="auth-form"
+    >
       <el-form-item label="用户名">
         <el-input
           v-model="form.username"
@@ -278,7 +313,7 @@ onMounted(async () => {
             v-model="form.email"
             :prefix-icon="Message"
             autocomplete="email"
-            placeholder="选填，用于找回账号"
+            placeholder="请输入邮箱"
           />
         </el-form-item>
         <el-form-item label="头像">
