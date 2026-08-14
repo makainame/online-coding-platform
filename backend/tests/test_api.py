@@ -778,6 +778,59 @@ def test_teacher_roll_call_import_list_and_delete(client):
     assert forbidden.status_code == 403
 
 
+def test_teacher_roll_call_groups_crud(client):
+    teacher_headers = login(client, username="teacher", password="teacher123")
+    defaults = client.get("/api/admin/roll-call/groups", headers=teacher_headers)
+    assert defaults.status_code == 200
+    assert len(defaults.json()) == 5
+    assert [item["name"] for item in defaults.json()] == [
+        "第1组",
+        "第2组",
+        "第3组",
+        "第4组",
+        "第5组",
+    ]
+
+    created = client.post(
+        "/api/admin/roll-call/groups",
+        headers=teacher_headers,
+        json={"name": "第六组"},
+    )
+    assert created.status_code == 201
+    group_id = created.json()["id"]
+
+    renamed = client.put(
+        f"/api/admin/roll-call/groups/{group_id}",
+        headers=teacher_headers,
+        json={"name": "第六小组"},
+    )
+    assert renamed.status_code == 200
+    assert renamed.json()["name"] == "第六小组"
+
+    deleted = client.delete(
+        f"/api/admin/roll-call/groups/{defaults.json()[0]['id']}",
+        headers=teacher_headers,
+    )
+    assert deleted.status_code == 204
+
+    remaining = client.get("/api/admin/roll-call/groups", headers=teacher_headers).json()
+    assert len(remaining) == 5
+    for item in remaining[1:]:
+        assert client.delete(
+            f"/api/admin/roll-call/groups/{item['id']}",
+            headers=teacher_headers,
+        ).status_code == 204
+    last_delete = client.delete(
+        f"/api/admin/roll-call/groups/{remaining[0]['id']}",
+        headers=teacher_headers,
+    )
+    assert last_delete.status_code == 400
+
+    student_headers = login(client)
+    forbidden = client.get("/api/admin/roll-call/groups", headers=student_headers)
+    assert forbidden.status_code == 403
+
+
 def test_teacher_class_appears_in_stats_and_export(client):
     teacher_headers = login(client, username="teacher", password="teacher123")
     class_group = client.post(

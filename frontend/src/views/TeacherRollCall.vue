@@ -12,6 +12,13 @@ const classFilter = ref("");
 const pickCount = ref(1);
 const currentPicks = ref([]);
 const pickedIds = ref(new Set());
+const groups = ref([]);
+const groupPickCount = ref(1);
+const currentGroupPicks = ref([]);
+const pickedGroupIds = ref(new Set());
+const newGroupName = ref("");
+const groupLoading = ref(false);
+const groupSaving = ref(false);
 const fileInput = ref(null);
 const addVisible = ref(false);
 const addForm = reactive({
@@ -44,6 +51,16 @@ async function loadStudents() {
     students.value = data;
   } finally {
     loading.value = false;
+  }
+}
+
+async function loadGroups() {
+  groupLoading.value = true;
+  try {
+    const { data } = await api.get("/admin/roll-call/groups");
+    groups.value = data;
+  } finally {
+    groupLoading.value = false;
   }
 }
 
@@ -138,6 +155,99 @@ function resetPicked() {
   ElMessage.success("已重置本轮点名记录");
 }
 
+function randomGroupPick() {
+  let candidates = groups.value.filter(
+    (item) => !pickedGroupIds.value.has(item.id),
+  );
+  if (candidates.length === 0) {
+    ElMessage.info("所有小组都已抽过，已自动开始新一轮");
+    pickedGroupIds.value = new Set();
+    candidates = [...groups.value];
+  }
+  if (candidates.length === 0) {
+    ElMessage.warning("请先添加小组");
+    return;
+  }
+  const count = Math.min(groupPickCount.value, candidates.length);
+  currentGroupPicks.value = shuffle(candidates).slice(0, count);
+  currentGroupPicks.value.forEach((item) => {
+    pickedGroupIds.value.add(item.id);
+  });
+}
+
+function resetGroupPicked() {
+  pickedGroupIds.value = new Set();
+  currentGroupPicks.value = [];
+  ElMessage.success("已重置小组抽取记录");
+}
+
+async function addGroup() {
+  const name = newGroupName.value.trim();
+  if (!name) {
+    ElMessage.error("请输入小组名称");
+    return;
+  }
+  groupSaving.value = true;
+  try {
+    await api.post("/admin/roll-call/groups", { name });
+    newGroupName.value = "";
+    ElMessage.success("小组已添加");
+    await loadGroups();
+  } catch (error) {
+    ElMessage.error(error.response?.data?.detail || "添加小组失败");
+  } finally {
+    groupSaving.value = false;
+  }
+}
+
+async function renameGroup(group) {
+  let value = "";
+  try {
+    const result = await ElMessageBox.prompt("请输入新的小组名称", "重命名小组", {
+      inputValue: group.name,
+      confirmButtonText: "确认",
+      cancelButtonText: "取消",
+    });
+    value = result.value?.trim() || "";
+  } catch {
+    return;
+  }
+  if (!value) {
+    ElMessage.error("小组名称不能为空");
+    return;
+  }
+  try {
+    await api.put(`/admin/roll-call/groups/${group.id}`, { name: value });
+    ElMessage.success("小组已重命名");
+    await loadGroups();
+  } catch (error) {
+    ElMessage.error(error.response?.data?.detail || "重命名失败");
+  }
+}
+
+async function deleteGroup(group) {
+  try {
+    await ElMessageBox.confirm(
+      `确定删除小组“${group.name}”吗？`,
+      "删除小组",
+      {
+        type: "warning",
+        confirmButtonText: "确认",
+        cancelButtonText: "取消",
+      },
+    );
+  } catch {
+    return;
+  }
+  try {
+    await api.delete(`/admin/roll-call/groups/${group.id}`);
+    ElMessage.success("小组已删除");
+    await loadGroups();
+  } catch (error) {
+    ElMessage.error(error.response?.data?.detail || "删除小组失败");
+  }
+}
+
 async function addStudent() {
   const name = addForm.name.trim();
   if (!name) {
@@ -210,7 +320,10 @@ async function clearAll() {
   }
 }
 
-onMounted(loadStudents);
+onMounted(() => {
+  loadStudents();
+  loadGroups();
+});
 </script>
 
 <template>
@@ -293,6 +406,64 @@ onMounted(loadStudents);
           <span class="pick-index">{{ index + 1 }}</span>
           <strong>{{ item.name }}</strong>
           <span>{{ item.class_name || "未分班" }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel group-panel">
+      <h3 class="section-title">小组随机抽取</h3>
+      <div v-loading="groupLoading" class="group-list">
+        <div
+          v-for="group in groups"
+          :key="group.id"
+          class="group-chip"
+          :class="{ picked: pickedGroupIds.has(group.id) }"
+        >
+          <span class="group-name">{{ group.name }}</span>
+          <span class="group-status">
+            {{ pickedGroupIds.has(group.id) ? "已抽" : "未抽" }}
+          </span>
+          <el-button link type="primary" @click="renameGroup(group)">
+            重命名
+          </el-button>
+          <el-button link type="danger" @click="deleteGroup(group)">
+            删除
+          </el-button>
+        </div>
+      </div>
+
+      <div class="control-row group-controls">
+        <el-input
+          v-model="newGroupName"
+          placeholder="新小组名称"
+          clearable
+          style="width: 180px"
+          @keyup.enter="addGroup"
+        />
+        <el-button :loading="groupSaving" @click="addGroup">添加小组</el-button>
+        <el-input-number
+          v-model="groupPickCount"
+          :min="1"
+          :max="Math.max(1, groups.length)"
+          label="抽取组数"
+        />
+        <el-button type="primary" size="large" @click="randomGroupPick">
+          随机抽组
+        </el-button>
+        <el-button size="large" @click="resetGroupPicked">重置小组</el-button>
+      </div>
+
+      <div v-if="currentGroupPicks.length" class="pick-result">
+        <h3>本次抽中小组</h3>
+        <div class="pick-grid">
+          <div
+            v-for="(group, index) in currentGroupPicks"
+            :key="group.id"
+            class="pick-card group-pick-card"
+          >
+            <span class="pick-index">{{ index + 1 }}</span>
+            <strong>{{ group.name }}</strong>
+          </div>
         </div>
       </div>
     </div>
@@ -394,6 +565,51 @@ onMounted(loadStudents);
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.group-panel {
+  margin-bottom: 14px;
+}
+
+.group-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+  min-height: 44px;
+}
+
+.group-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid #dde3e8;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.group-chip.picked {
+  border-color: #16a34a;
+  background: #f0fdf4;
+}
+
+.group-name {
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.group-status {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.group-controls {
+  margin-top: 4px;
+}
+
+.group-pick-card strong {
+  color: #176b5b;
 }
 
 .pick-result {

@@ -69,6 +69,23 @@ class RollCallImportResult(BaseModel):
     total: int
 
 
+class RollCallGroupCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+
+
+class RollCallGroupUpdate(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+
+
+class RollCallGroupOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    sort_order: int = 0
+    created_at: object
+
+
 class PasswordReset(BaseModel):
     password: str = Field(min_length=6, max_length=100)
 

@@ -209,3 +209,13 @@ class RollCallStudent(Base):
     name = Column(String(100), nullable=False)
     class_name = Column(String(100), nullable=False, default="")
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class RollCallGroup(Base):
+    __tablename__ = "roll_call_groups"
+
+    id = Column(Integer, primary_key=True, index=True)
+    teacher_id = Column(Integer, nullable=False, index=True)
+    name = Column(String(100), nullable=False)
+    sort_order = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
