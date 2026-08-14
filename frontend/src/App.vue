@@ -292,7 +292,7 @@ onMounted(async () => {
       label-position="top"
       class="auth-form"
     >
-      <el-form-item label="用户名">
+      <el-form-item label="用户名" prop="username">
         <el-input
           v-model="form.username"
           :prefix-icon="User"
@@ -300,7 +300,7 @@ onMounted(async () => {
           placeholder="请输入用户名"
         />
       </el-form-item>
-      <el-form-item label="密码">
+      <el-form-item label="密码" prop="password">
         <el-input
           v-model="form.password"
           :prefix-icon="Lock"
@@ -311,7 +311,7 @@ onMounted(async () => {
         />
       </el-form-item>
       <template v-if="authMode === 'register'">
-        <el-form-item label="邮箱">
+        <el-form-item label="邮箱" prop="email">
           <el-input
             v-model="form.email"
             :prefix-icon="Message"
@@ -366,7 +366,7 @@ onMounted(async () => {
               placeholder="模型名称"
             />
           </el-form-item>
-          <el-form-item label="自己的 API Key">
+          <el-form-item label="自己的 API Key" prop="ai_api_key">
             <el-input
               v-model="form.ai_api_key"
               :prefix-icon="Key"
@@ -377,7 +377,7 @@ onMounted(async () => {
           </el-form-item>
         </template>
         <template v-else>
-          <el-form-item label="教师授权码">
+          <el-form-item label="教师授权码" prop="teacher_code">
             <el-input
               v-model="form.teacher_code"
               :prefix-icon="Key"
