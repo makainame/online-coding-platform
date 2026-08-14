@@ -722,6 +722,62 @@ def test_delete_class_unassigns_linked_exam(client):
     assert exam_after_delete["class_id"] is None
 
 
+def test_teacher_roll_call_import_list_and_delete(client):
+    teacher_headers = login(client, username="teacher", password="teacher123")
+    imported = client.post(
+        "/api/admin/roll-call/students/import",
+        headers=teacher_headers,
+        json=[
+            {"name": "张三", "class_name": "一班"},
+            {"name": "李四", "class_name": "一班"},
+            {"name": "张三", "class_name": "一班"},
+        ],
+    )
+    assert imported.status_code == 200
+    assert imported.json()["created"] == 2
+    assert imported.json()["skipped"] == 1
+
+    listed = client.get("/api/admin/roll-call/students", headers=teacher_headers)
+    assert listed.status_code == 200
+    assert len(listed.json()) == 2
+
+    duplicate = client.post(
+        "/api/admin/roll-call/students",
+        headers=teacher_headers,
+        json={"name": "张三", "class_name": "一班"},
+    )
+    assert duplicate.status_code == 400
+
+    created = client.post(
+        "/api/admin/roll-call/students",
+        headers=teacher_headers,
+        json={"name": "王五", "class_name": "二班"},
+    )
+    assert created.status_code == 201
+
+    deleted = client.delete(
+        f"/api/admin/roll-call/students/{created.json()['id']}",
+        headers=teacher_headers,
+    )
+    assert deleted.status_code == 204
+
+    cleared = client.delete(
+        "/api/admin/roll-call/students",
+        headers=teacher_headers,
+    )
+    assert cleared.status_code == 204
+
+    empty_list = client.get("/api/admin/roll-call/students", headers=teacher_headers)
+    assert empty_list.json() == []
+
+    student_headers = login(client)
+    forbidden = client.get(
+        "/api/admin/roll-call/students",
+        headers=student_headers,
+    )
+    assert forbidden.status_code == 403
+
+
 def test_teacher_class_appears_in_stats_and_export(client):
     teacher_headers = login(client, username="teacher", password="teacher123")
     class_group = client.post(

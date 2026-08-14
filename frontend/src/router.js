@@ -10,6 +10,7 @@ import QuestionBank from "./views/QuestionBank.vue";
 import StudentExams from "./views/StudentExams.vue";
 import Students from "./views/Students.vue";
 import Submissions from "./views/Submissions.vue";
+import TeacherRollCall from "./views/TeacherRollCall.vue";
 import TeacherStats from "./views/TeacherStats.vue";
 
 const router = createRouter({
@@ -24,6 +25,7 @@ const router = createRouter({
     { path: "/exam/:id", name: "exam-taking", component: ExamTaking },
     { path: "/admin/exams", name: "admin-exams", component: AdminExams },
     { path: "/question-bank", name: "question-bank", component: QuestionBank },
+    { path: "/teacher/roll-call", name: "teacher-roll-call", component: TeacherRollCall },
     { path: "/teacher-stats", name: "teacher-stats", component: TeacherStats },
     { path: "/ai-settings", name: "ai-settings", component: AiSettings },
   ],

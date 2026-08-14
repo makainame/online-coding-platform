@@ -199,3 +199,13 @@ class Feedback(Base):
     score = Column(Float, nullable=True)
     provider = Column(String(20), nullable=False, default="local")
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class RollCallStudent(Base):
+    __tablename__ = "roll_call_students"
+
+    id = Column(Integer, primary_key=True, index=True)
+    teacher_id = Column(Integer, nullable=False, index=True)
+    name = Column(String(100), nullable=False)
+    class_name = Column(String(100), nullable=False, default="")
+    created_at = Column(DateTime, default=datetime.utcnow)

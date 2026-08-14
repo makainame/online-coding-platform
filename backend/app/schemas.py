@@ -49,6 +49,26 @@ class StudentImportResult(BaseModel):
     total: int
 
 
+class RollCallStudentCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    class_name: str = Field(default="", max_length=100)
+
+
+class RollCallStudentOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    class_name: str = ""
+    created_at: object
+
+
+class RollCallImportResult(BaseModel):
+    created: int
+    skipped: int
+    total: int
+
+
 class PasswordReset(BaseModel):
     password: str = Field(min_length=6, max_length=100)
 

@@ -207,6 +207,9 @@ onMounted(async () => {
         <router-link v-if="user?.role === 'teacher'" to="/teacher-stats">
           统计面板
         </router-link>
+        <router-link v-if="user?.role === 'teacher'" to="/teacher/roll-call">
+          随机点名
+        </router-link>
         <router-link v-if="user?.role === 'student'" to="/exams">
           考试
         </router-link>

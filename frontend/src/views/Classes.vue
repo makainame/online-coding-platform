@@ -135,7 +135,7 @@ onMounted(loadAll);
     <div class="panel">
       <h3 class="section-title">班级列表</h3>
       <el-table v-loading="loading" :data="classes" row-key="id">
-        <el-table-column prop="id" label="#" width="80" />
+        <el-table-column type="index" label="#" width="80" :index="(index) => index + 1" />
         <el-table-column prop="name" label="班级名称" min-width="200" />
         <el-table-column prop="student_count" label="学生数" width="120" />
         <el-table-column label="操作" width="180">
@@ -157,7 +157,7 @@ onMounted(loadAll);
     <div class="panel">
       <h3 class="section-title">学生分班</h3>
       <el-table v-loading="loading" :data="students" row-key="id">
-        <el-table-column prop="id" label="#" width="80" />
+        <el-table-column type="index" label="#" width="80" :index="(index) => index + 1" />
         <el-table-column prop="username" label="用户名" min-width="160" />
         <el-table-column prop="email" label="邮箱" min-width="220" />
         <el-table-column label="所属班级" min-width="220">

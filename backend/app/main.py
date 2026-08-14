@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from . import models  # noqa: F401
 from .config import BASE_DIR
 from .database import Base, engine, get_db
-from .routers import ai_settings, auth, classes, drafts, exams, feedback, problems, statistics, students, submissions
+from .routers import ai_settings, auth, classes, drafts, exams, feedback, problems, roll_call, statistics, students, submissions
 from .seed import seed_data
 
 
@@ -149,6 +149,7 @@ app.include_router(feedback.router, prefix="/api")
 app.include_router(statistics.router, prefix="/api")
 app.include_router(students.router, prefix="/api")
 app.include_router(classes.router, prefix="/api")
+app.include_router(roll_call.router, prefix="/api")
 app.include_router(exams.router, prefix="/api")
 app.include_router(ai_settings.router, prefix="/api")
 app.include_router(drafts.router, prefix="/api")
