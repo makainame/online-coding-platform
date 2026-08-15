@@ -158,7 +158,11 @@ onMounted(loadAll);
       <h3 class="section-title">学生分班</h3>
       <el-table v-loading="loading" :data="students" row-key="id">
         <el-table-column type="index" label="#" width="80" :index="(index) => index + 1" />
-        <el-table-column prop="username" label="用户名" min-width="160" />
+        <el-table-column label="学生" min-width="160">
+          <template #default="{ row }">
+            {{ row.display_name || row.username }}
+          </template>
+        </el-table-column>
         <el-table-column prop="email" label="邮箱" min-width="220" />
         <el-table-column label="所属班级" min-width="220">
           <template #default="{ row }">

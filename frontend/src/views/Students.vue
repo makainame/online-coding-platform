@@ -18,12 +18,14 @@ const importJson = ref(`[
   {
     "username": "student01",
     "password": "123456",
+    "display_name": "学生一",
     "email": "student01@example.com",
     "ai_api_key": ""
   },
   {
     "username": "student02",
     "password": "123456",
+    "display_name": "学生二",
     "email": "student02@example.com",
     "ai_api_key": ""
   }
@@ -31,7 +33,13 @@ const importJson = ref(`[
 const createForm = reactive({
   username: "",
   password: "",
+  display_name: "",
   email: "",
+});
+const nameVisible = ref(false);
+const nameForm = reactive({
+  id: null,
+  display_name: "",
 });
 const resetForm = reactive({
   password: "",
@@ -54,6 +62,7 @@ async function createStudent() {
     createVisible.value = false;
     createForm.username = "";
     createForm.password = "";
+    createForm.display_name = "";
     createForm.email = "";
     await loadStudents();
   } finally {
@@ -91,9 +100,9 @@ async function importStudents(payload = null) {
 
 function downloadTemplate() {
   const rows = [
-    ["username", "password", "email", "ai_api_key"],
-    ["student01", "123456", "student01@example.com", ""],
-    ["student02", "123456", "student02@example.com", ""],
+    ["username", "password", "display_name", "email", "ai_api_key"],
+    ["student01", "123456", "张三", "student01@example.com", ""],
+    ["student02", "123456", "李四", "student02@example.com", ""],
   ];
   const worksheet = XLSX.utils.aoa_to_sheet(rows);
   const workbook = XLSX.utils.book_new();
@@ -115,6 +124,7 @@ function handleExcel(event) {
         .map((row) => ({
           username: row.username || row["用户名"],
           password: row.password || row["密码"],
+          display_name: row.display_name || row["姓名"] || row["显示名"] || "",
           email: row.email || row["邮箱"] || "",
           ai_api_key:
             row.ai_api_key || row["AI API Key"] || row["AI Key"] || "",
@@ -180,6 +190,28 @@ async function deleteStudent(student) {
   }
 }
 
+function openName(student) {
+  nameForm.id = student.id;
+  nameForm.display_name = student.display_name || "";
+  nameVisible.value = true;
+}
+
+async function saveName() {
+  saving.value = true;
+  try {
+    await api.put(`/admin/students/${nameForm.id}/display-name`, {
+      display_name: nameForm.display_name,
+    });
+    nameVisible.value = false;
+    ElMessage.success("学生姓名已保存");
+    await loadStudents();
+  } catch (error) {
+    ElMessage.error(error.response?.data?.detail || "保存姓名失败");
+  } finally {
+    saving.value = false;
+  }
+}
+
 function formatTime(value) {
   return value ? new Date(value).toLocaleString() : "-";
 }
@@ -212,6 +244,9 @@ onMounted(loadStudents);
     <div class="panel">
       <el-table v-loading="loading" :data="students" row-key="id">
         <el-table-column type="index" label="#" width="80" :index="(index) => index + 1" />
+        <el-table-column prop="display_name" label="姓名" min-width="120">
+          <template #default="{ row }">{{ row.display_name || "-" }}</template>
+        </el-table-column>
         <el-table-column prop="username" label="用户名" min-width="140" />
         <el-table-column prop="class_name" label="班级" min-width="120">
           <template #default="{ row }">{{ row.class_name || "未分班" }}</template>
@@ -222,8 +257,9 @@ onMounted(loadStudents);
         </el-table-column>
         <el-table-column prop="submission_count" label="提交数" width="100" />
         <el-table-column prop="accepted_count" label="通过数" width="100" />
-        <el-table-column label="操作" width="180">
+        <el-table-column label="操作" width="260">
           <template #default="{ row }">
+            <el-button link type="primary" @click="openName(row)">姓名</el-button>
             <el-button link type="primary" @click="openReset(row)">重置密码</el-button>
             <el-button
               link
@@ -246,6 +282,9 @@ onMounted(loadStudents);
     <el-form label-position="top">
       <el-form-item label="用户名">
         <el-input v-model="createForm.username" autocomplete="off" />
+      </el-form-item>
+      <el-form-item label="姓名">
+        <el-input v-model="createForm.display_name" autocomplete="off" placeholder="可填写汉字姓名" />
       </el-form-item>
       <el-form-item label="初始密码">
         <el-input v-model="createForm.password" type="password" show-password />
@@ -285,6 +324,18 @@ onMounted(loadStudents);
     <template #footer>
       <el-button @click="resetVisible = false">取消</el-button>
       <el-button type="primary" :loading="saving" @click="resetPassword">保存</el-button>
+    </template>
+  </el-dialog>
+
+  <el-dialog v-model="nameVisible" title="设置学生姓名" width="420px">
+    <el-form label-position="top">
+      <el-form-item label="汉字姓名">
+        <el-input v-model="nameForm.display_name" autocomplete="off" placeholder="例如：张三" />
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <el-button @click="nameVisible = false">取消</el-button>
+      <el-button type="primary" :loading="saving" @click="saveName">保存</el-button>
     </template>
   </el-dialog>
 </template>

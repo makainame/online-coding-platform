@@ -250,6 +250,64 @@ def test_teacher_submission_list_contains_student_submissions(client):
     assert student_row["latest_status"] == "wrong_answer"
 
 
+def test_student_display_name_appears_in_submission_views(client):
+    teacher_headers = login(client, username="teacher", password="teacher123")
+    created = client.post(
+        "/api/admin/students",
+        headers=teacher_headers,
+        json={
+            "username": "display_name_student",
+            "password": "name123456",
+            "display_name": "测试中文名",
+            "email": "display-name@example.com",
+        },
+    )
+    assert created.status_code == 201
+    student_id = created.json()["id"]
+
+    student_headers = login(
+        client,
+        username="display_name_student",
+        password="name123456",
+    )
+    problems = client.get("/api/problems", headers=student_headers).json()
+    problem = next(item for item in problems if item["title"] == "两数之和")
+    client.post(
+        "/api/submissions",
+        headers=student_headers,
+        json={
+            "problem_id": problem["id"],
+            "code": "a, b = map(int, input().split())\nprint(a + b)",
+            "language": "python",
+        },
+    )
+
+    submission_list = client.get("/api/submissions", headers=teacher_headers).json()
+    assert any(
+        row["user_id"] == student_id and row["display_name"] == "测试中文名"
+        for row in submission_list
+    )
+
+    local_date = datetime.now(timezone(timedelta(hours=8))).date().isoformat()
+    daily = client.get(
+        "/api/admin/submissions/daily",
+        headers=teacher_headers,
+        params={"date": local_date},
+    ).json()
+    student_row = next(
+        item for item in daily["students"] if item["user_id"] == student_id
+    )
+    assert student_row["display_name"] == "测试中文名"
+
+    renamed = client.put(
+        f"/api/admin/students/{student_id}/display-name",
+        headers=teacher_headers,
+        json={"display_name": "新中文名"},
+    )
+    assert renamed.status_code == 200
+    assert renamed.json()["display_name"] == "新中文名"
+
+
 def test_javascript_problem_is_seeded_with_starter_code(client):
     headers = login(client)
     problems = client.get("/api/problems", headers=headers).json()

@@ -76,6 +76,7 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> AuthRes
         )
     user = User(
         username=payload.username,
+        display_name=payload.display_name.strip() if payload.display_name else None,
         email=payload.email,
         avatar=_save_avatar(payload.avatar_base64),
         password_hash=hash_password(payload.password),

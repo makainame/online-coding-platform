@@ -180,7 +180,11 @@ onMounted(async () => {
         </div>
         <el-table v-if="daily" :data="daily.students" row-key="user_id">
           <el-table-column type="index" label="#" width="80" :index="(index) => index + 1" />
-          <el-table-column prop="username" label="学生" min-width="140" />
+          <el-table-column label="学生" min-width="140">
+            <template #default="{ row }">
+              {{ row.display_name || row.username }}
+            </template>
+          </el-table-column>
           <el-table-column prop="class_name" label="班级" min-width="140">
             <template #default="{ row }">{{ row.class_name || "未分班" }}</template>
           </el-table-column>
@@ -227,7 +231,12 @@ onMounted(async () => {
     <div class="panel">
       <el-table v-loading="loading" :data="submissions" row-key="id">
         <el-table-column type="index" label="#" width="80" :index="(index) => index + 1" />
-        <el-table-column prop="username" label="学生" min-width="120" />
+        <el-table-column label="学生" min-width="120">
+          <template #default="{ row }">
+            <div>{{ row.display_name || row.username }}</div>
+            <div v-if="row.display_name" class="username-sub">{{ row.username }}</div>
+          </template>
+        </el-table-column>
         <el-table-column
           prop="problem_title"
           label="题目"
@@ -316,6 +325,11 @@ onMounted(async () => {
   grid-template-columns: repeat(2, minmax(120px, 1fr));
   gap: 12px;
   margin-bottom: 12px;
+}
+
+.username-sub {
+  color: #94a3b8;
+  font-size: 12px;
 }
 
 .stat-card {

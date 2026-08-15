@@ -62,6 +62,14 @@ def ensure_schema() -> None:
                         "ADD COLUMN avatar VARCHAR(500)"
                     )
                 )
+        if "display_name" not in user_columns:
+            with engine.begin() as connection:
+                connection.execute(
+                    text(
+                        "ALTER TABLE users "
+                        "ADD COLUMN display_name VARCHAR(100)"
+                    )
+                )
         if "class_id" not in user_columns:
             with engine.begin() as connection:
                 connection.execute(

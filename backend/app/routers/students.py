@@ -25,6 +25,7 @@ from ..schemas import (
     ScoreExportOut,
     ScoreExportProblem,
     StudentCreate,
+    StudentDisplayNameUpdate,
     StudentImportResult,
     StudentScoreExportRow,
     StudentOut,
@@ -85,6 +86,7 @@ def admin_statistics(
             AdminStudentStatOut(
                 user_id=student.id,
                 username=student.username,
+                display_name=student.display_name,
                 email=student.email,
                 class_id=student.class_id,
                 class_name=class_name_by_id.get(student.class_id, ""),
@@ -154,6 +156,7 @@ def export_student_scores(
         rows.append(
             StudentScoreExportRow(
                 username=student.username,
+                display_name=student.display_name,
                 email=student.email,
                 class_id=student.class_id,
                 class_name=class_name_by_id.get(student.class_id, ""),
@@ -210,6 +213,7 @@ def _class_name_map(db: Session, students: list[User]) -> dict[int, str]:
 def _build_student(db: Session, payload: StudentCreate) -> User:
     student = User(
         username=payload.username,
+        display_name=payload.display_name.strip() if payload.display_name else None,
         email=payload.email,
         password_hash=hash_password(payload.password),
         role="student",
@@ -268,6 +272,32 @@ def create_student(
         )
 
     student = _build_student(db, payload)
+    db.commit()
+    db.refresh(student)
+    _student_counts(db, student)
+    return student
+
+
+@router.put(
+    "/admin/students/{student_id}/display-name",
+    response_model=StudentOut,
+)
+def update_student_display_name(
+    student_id: int,
+    payload: StudentDisplayNameUpdate,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_teacher),
+) -> User:
+    student = (
+        db.query(User)
+        .filter(User.id == student_id, User.role == "student")
+        .first()
+    )
+    if student is None:
+        raise HTTPException(status_code=404, detail="学生账号不存在")
+    student.display_name = (
+        payload.display_name.strip() if payload.display_name else None
+    )
     db.commit()
     db.refresh(student)
     _student_counts(db, student)

@@ -25,6 +25,7 @@ const authFormRef = ref(null);
 const form = reactive({
   username: "student",
   password: "student123",
+  display_name: "",
   email: "",
   role: "student",
   ai_provider: "deepseek",
@@ -221,7 +222,7 @@ onMounted(async () => {
             <img v-if="user.avatar" :src="user.avatar" class="user-avatar" alt="" />
             <span v-else class="avatar-fallback">{{ (user.username || "U")[0].toUpperCase() }}</span>
           </div>
-          <span class="user-chip">{{ user.username }}</span>
+          <span class="user-chip">{{ user.display_name || user.username }}</span>
           <span class="role-chip" :class="user.role">
             {{ user.role === "teacher" ? "教师" : "学生" }}
           </span>
@@ -300,6 +301,15 @@ onMounted(async () => {
           placeholder="请输入用户名"
         />
       </el-form-item>
+      <template v-if="authMode === 'register'">
+        <el-form-item label="姓名">
+          <el-input
+            v-model="form.display_name"
+            autocomplete="name"
+            placeholder="选填，填写汉字姓名"
+          />
+        </el-form-item>
+      </template>
       <el-form-item label="密码" prop="password">
         <el-input
           v-model="form.password"

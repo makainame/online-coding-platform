@@ -14,6 +14,10 @@ const studentChartRef = ref(null);
 const dailyChartRef = ref(null);
 const charts = [];
 
+function displayName(item) {
+  return item.display_name || item.username;
+}
+
 async function loadStats() {
   loading.value = true;
   try {
@@ -45,7 +49,7 @@ async function exportScores() {
       ),
     ];
     const rows = data.rows.map((row) => [
-      row.username,
+      displayName(row),
       row.class_name || "",
       row.email || "",
       row.submission_count,
@@ -170,7 +174,7 @@ function renderCharts() {
     grid: { left: 40, right: 16, top: 28, bottom: 52 },
     xAxis: {
       type: "category",
-      data: stats.value.students.map((item) => item.username),
+      data: stats.value.students.map(displayName),
     },
     yAxis: { type: "value", minInterval: 1 },
     series: [
@@ -293,7 +297,9 @@ onBeforeUnmount(() => {
     <div class="panel">
       <el-table v-loading="loading" :data="stats?.students || []" row-key="user_id">
         <el-table-column prop="user_id" label="ID" width="80" />
-        <el-table-column prop="username" label="用户名" min-width="140" />
+        <el-table-column label="学生" min-width="140">
+          <template #default="{ row }">{{ displayName(row) }}</template>
+        </el-table-column>
         <el-table-column prop="class_name" label="班级" min-width="120">
           <template #default="{ row }">{{ row.class_name || "未分班" }}</template>
         </el-table-column>

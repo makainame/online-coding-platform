@@ -26,6 +26,7 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(50), unique=True, index=True, nullable=False)
+    display_name = Column(String(100), nullable=True)
     email = Column(String(100), unique=True, nullable=True)
     avatar = Column(String(500), nullable=True)
     class_id = Column(Integer, ForeignKey("class_groups.id"), nullable=True, index=True)

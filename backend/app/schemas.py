@@ -9,6 +9,7 @@ class RegisterRequest(BaseModel):
     username: str = Field(min_length=2, max_length=50)
     password: str = Field(min_length=6, max_length=100)
     email: str = Field(min_length=1, max_length=100)
+    display_name: Optional[str] = Field(default=None, max_length=100)
     role: Literal["student", "teacher"] = "student"
     ai_provider: Literal["deepseek", "qwen"] = "deepseek"
     ai_base_url: Optional[str] = None
@@ -28,6 +29,7 @@ class UserOut(BaseModel):
 
     id: int
     username: str
+    display_name: Optional[str] = None
     email: Optional[str] = None
     avatar: Optional[str] = None
     role: str
@@ -36,11 +38,16 @@ class UserOut(BaseModel):
 class StudentCreate(BaseModel):
     username: str = Field(min_length=2, max_length=50)
     password: str = Field(min_length=6, max_length=100)
+    display_name: Optional[str] = Field(default=None, max_length=100)
     email: Optional[str] = None
     ai_provider: Literal["deepseek", "qwen"] = "deepseek"
     ai_base_url: Optional[str] = None
     ai_model: Optional[str] = None
     ai_api_key: Optional[str] = None
+
+
+class StudentDisplayNameUpdate(BaseModel):
+    display_name: Optional[str] = Field(default=None, max_length=100)
 
 
 class StudentImportResult(BaseModel):
@@ -101,6 +108,7 @@ class StudentOut(UserOut):
 class AdminStudentStatOut(BaseModel):
     user_id: int
     username: str
+    display_name: Optional[str] = None
     email: Optional[str] = None
     class_id: Optional[int] = None
     class_name: str = ""
@@ -128,6 +136,7 @@ class ScoreExportProblem(BaseModel):
 
 class StudentScoreExportRow(BaseModel):
     username: str
+    display_name: Optional[str] = None
     email: Optional[str] = None
     class_id: Optional[int] = None
     class_name: str = ""
@@ -475,12 +484,14 @@ class SubmissionOut(BaseModel):
 
 class SubmissionListOut(SubmissionOut):
     username: str = ""
+    display_name: Optional[str] = None
     problem_title: str = ""
 
 
 class DailySubmissionStudentOut(BaseModel):
     user_id: int
     username: str
+    display_name: Optional[str] = None
     email: Optional[str] = None
     class_name: str = ""
     submission_count: int = 0

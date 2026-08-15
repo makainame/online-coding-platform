@@ -69,7 +69,7 @@ def list_submissions(
     date: str | None = None,
 ):
     query = (
-        db.query(Submission, User.username, Problem.title)
+        db.query(Submission, User.username, User.display_name, Problem.title)
         .join(User, User.id == Submission.user_id)
         .join(Problem, Problem.id == Submission.problem_id)
     )
@@ -90,9 +90,10 @@ def list_submissions(
         SubmissionListOut(
             **SubmissionOut.model_validate(submission).model_dump(),
             username=username,
+            display_name=display_name,
             problem_title=problem_title,
         )
-        for submission, username, problem_title in rows
+        for submission, username, display_name, problem_title in rows
     ]
 
 
@@ -131,6 +132,7 @@ def daily_submissions(
             DailySubmissionStudentOut(
                 user_id=student.id,
                 username=student.username,
+                display_name=student.display_name,
                 email=student.email,
                 class_name=class_name_by_id.get(student.class_id, ""),
                 submission_count=len(records),
