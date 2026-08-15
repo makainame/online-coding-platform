@@ -1,4 +1,5 @@
 import base64
+from datetime import datetime, timedelta, timezone
 
 
 def login(client, username="student", password="student123"):
@@ -203,6 +204,15 @@ def test_teacher_submission_list_contains_student_submissions(client):
             "language": "python",
         },
     ).json()
+    client.post(
+        "/api/submissions",
+        headers=student_headers,
+        json={
+            "problem_id": problem["id"],
+            "code": "print(1)",
+            "language": "python",
+        },
+    )
 
     teacher_headers = login(client, username="teacher", password="teacher123")
     teacher_list = client.get("/api/submissions", headers=teacher_headers)
@@ -222,6 +232,22 @@ def test_teacher_submission_list_contains_student_submissions(client):
     assert teacher_stats.status_code == 200
     assert teacher_stats.json()["total_submissions"] >= 1
     assert teacher_stats.json()["today_count"] >= 1
+
+    local_date = datetime.now(timezone(timedelta(hours=8))).date().isoformat()
+    daily = client.get(
+        "/api/admin/submissions/daily",
+        headers=teacher_headers,
+        params={"date": local_date},
+    )
+    assert daily.status_code == 200
+    daily_data = daily.json()
+    assert daily_data["submitted_students"] >= 1
+    student_row = next(
+        item for item in daily_data["students"] if item["username"] == "student"
+    )
+    assert student_row["submission_count"] >= 2
+    assert student_row["accepted_count"] >= 1
+    assert student_row["latest_status"] == "wrong_answer"
 
 
 def test_javascript_problem_is_seeded_with_starter_code(client):

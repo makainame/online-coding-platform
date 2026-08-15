@@ -4,8 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import Exam, ExamAttempt, ExamProblem, Problem, Submission, User
+from ..models import ClassGroup, Exam, ExamAttempt, ExamProblem, Problem, Submission, User
 from ..schemas import (
+    DailySubmissionOut,
+    DailySubmissionStudentOut,
     ExecuteRequest,
     ExecuteResultOut,
     FeedbackOut,
@@ -14,12 +16,36 @@ from ..schemas import (
     SubmissionListOut,
     SubmissionOut,
 )
-from ..security import get_current_user
+from ..security import get_current_user, require_teacher
 from ..services.ai_feedback import generate_feedback
 from ..services.executor import execute_code, execute_custom
 
 
 router = APIRouter(tags=["submissions"])
+
+
+def _local_date_range(date: str) -> tuple[datetime, datetime]:
+    try:
+        local_midnight = datetime.strptime(date, "%Y-%m-%d")
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail="日期格式不正确，应为 YYYY-MM-DD",
+        ) from exc
+    start = local_midnight - timedelta(hours=8)
+    return start, start + timedelta(days=1)
+
+
+def _class_name_map(db: Session, students: list[User]) -> dict[int, str]:
+    class_ids = {student.class_id for student in students if student.class_id}
+    if not class_ids:
+        return {}
+    return {
+        class_group.id: class_group.name
+        for class_group in db.query(ClassGroup)
+        .filter(ClassGroup.id.in_(class_ids))
+        .all()
+    }
 
 
 @router.get("/submissions/my", response_model=list[SubmissionOut])
@@ -40,6 +66,7 @@ def my_submissions(
 def list_submissions(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
+    date: str | None = None,
 ):
     query = (
         db.query(Submission, User.username, Problem.title)
@@ -48,9 +75,15 @@ def list_submissions(
     )
     if user.role != "teacher":
         query = query.filter(Submission.user_id == user.id)
+    if date is not None:
+        start, end = _local_date_range(date)
+        query = query.filter(
+            Submission.created_at >= start,
+            Submission.created_at < end,
+        )
     rows = (
         query.order_by(Submission.id.desc())
-        .limit(200)
+        .limit(1000)
         .all()
     )
     return [
@@ -61,6 +94,62 @@ def list_submissions(
         )
         for submission, username, problem_title in rows
     ]
+
+
+@router.get("/admin/submissions/daily", response_model=DailySubmissionOut)
+def daily_submissions(
+    date: str,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_teacher),
+) -> DailySubmissionOut:
+    start, end = _local_date_range(date)
+    students = (
+        db.query(User)
+        .filter(User.role == "student")
+        .order_by(User.class_id, User.username)
+        .all()
+    )
+    submissions = (
+        db.query(Submission)
+        .filter(
+            Submission.created_at >= start,
+            Submission.created_at < end,
+        )
+        .order_by(Submission.created_at, Submission.id)
+        .all()
+    )
+    class_name_by_id = _class_name_map(db, students)
+    grouped: dict[int, list[Submission]] = {}
+    for submission in submissions:
+        grouped.setdefault(submission.user_id, []).append(submission)
+
+    rows = []
+    for student in students:
+        records = grouped.get(student.id, [])
+        latest = records[-1] if records else None
+        rows.append(
+            DailySubmissionStudentOut(
+                user_id=student.id,
+                username=student.username,
+                email=student.email,
+                class_name=class_name_by_id.get(student.class_id, ""),
+                submission_count=len(records),
+                accepted_count=sum(
+                    1 for record in records if record.status == "accepted"
+                ),
+                latest_status=latest.status if latest else "",
+                latest_time=latest.created_at if latest else None,
+            )
+        )
+
+    submitted_students = sum(1 for row in rows if row.submission_count > 0)
+    return DailySubmissionOut(
+        date=date,
+        total_students=len(rows),
+        submitted_students=submitted_students,
+        not_submitted_students=len(rows) - submitted_students,
+        students=rows,
+    )
 
 
 @router.post("/execute", response_model=ExecuteResultOut)

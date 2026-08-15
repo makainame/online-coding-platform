@@ -478,6 +478,25 @@ class SubmissionListOut(SubmissionOut):
     problem_title: str = ""
 
 
+class DailySubmissionStudentOut(BaseModel):
+    user_id: int
+    username: str
+    email: Optional[str] = None
+    class_name: str = ""
+    submission_count: int = 0
+    accepted_count: int = 0
+    latest_status: str = ""
+    latest_time: object = None
+
+
+class DailySubmissionOut(BaseModel):
+    date: str
+    total_students: int
+    submitted_students: int
+    not_submitted_students: int
+    students: list[DailySubmissionStudentOut]
+
+
 class SubmissionDetail(SubmissionOut):
     results: list[TestResultOut] = []
 
