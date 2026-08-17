@@ -191,6 +191,26 @@ class ExamAttempt(Base):
     user = relationship("User")
 
 
+class ExamCodeDraft(Base):
+    __tablename__ = "exam_code_drafts"
+    __table_args__ = (
+        UniqueConstraint(
+            "exam_id",
+            "user_id",
+            "problem_id",
+            name="uq_exam_user_problem_draft",
+        ),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    exam_id = Column(Integer, ForeignKey("exams.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    problem_id = Column(Integer, ForeignKey("problems.id"), nullable=False, index=True)
+    code = Column(Text, nullable=False, default="")
+    language = Column(String(20), nullable=False, default="python")
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class Feedback(Base):
     __tablename__ = "feedbacks"
 

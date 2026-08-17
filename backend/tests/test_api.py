@@ -155,6 +155,73 @@ def test_code_draft_save_and_get(client):
     assert loaded.json()["code"] == "print('draft')"
 
 
+def test_exam_drafts_are_isolated_from_practice_drafts(client):
+    student_headers = login(client)
+    problems = client.get("/api/problems", headers=student_headers).json()
+    problem = next(item for item in problems if item["title"] == "两数之和")
+
+    practice_saved = client.put(
+        f"/api/drafts/{problem['id']}",
+        headers=student_headers,
+        json={
+            "code": "print('practice answer')",
+            "language": "python",
+        },
+    )
+    assert practice_saved.status_code == 200
+
+    teacher_headers = login(client, username="teacher", password="teacher123")
+    exam = client.post(
+        "/api/admin/exams",
+        headers=teacher_headers,
+        json={
+            "title": "草稿隔离考试",
+            "description": "验证考试草稿与练习草稿隔离",
+            "duration_minutes": 30,
+            "status": "published",
+            "problem_ids": [problem["id"]],
+        },
+    ).json()
+
+    started = client.post(
+        f"/api/exams/{exam['id']}/start",
+        headers=student_headers,
+    )
+    assert started.status_code == 200
+
+    exam_draft = client.get(
+        f"/api/exams/{exam['id']}/drafts/{problem['id']}",
+        headers=student_headers,
+    )
+    assert exam_draft.status_code == 200
+    assert exam_draft.json()["code"] == ""
+
+    saved_exam = client.put(
+        f"/api/exams/{exam['id']}/drafts/{problem['id']}",
+        headers=student_headers,
+        json={
+            "code": "print('exam answer')",
+            "language": "python",
+        },
+    )
+    assert saved_exam.status_code == 200
+    assert saved_exam.json()["code"] == "print('exam answer')"
+
+    practice_after = client.get(
+        f"/api/drafts/{problem['id']}",
+        headers=student_headers,
+    )
+    assert practice_after.status_code == 200
+    assert practice_after.json()["code"] == "print('practice answer')"
+
+    reloaded_exam = client.get(
+        f"/api/exams/{exam['id']}/drafts/{problem['id']}",
+        headers=student_headers,
+    )
+    assert reloaded_exam.status_code == 200
+    assert reloaded_exam.json()["code"] == "print('exam answer')"
+
+
 def test_student_full_flow(client):
     headers = login(client)
 

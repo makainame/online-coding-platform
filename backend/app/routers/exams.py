@@ -11,12 +11,15 @@ from ..models import (
     ClassGroup,
     Exam,
     ExamAttempt,
+    ExamCodeDraft,
     ExamProblem,
     Problem,
     Submission,
     User,
 )
 from ..schemas import (
+    CodeDraftOut,
+    CodeDraftSave,
     ExamAutoCreate,
     ExamAutoPreviewOut,
     ExamAutoUpdate,
@@ -580,6 +583,9 @@ def delete_exam(
         {Submission.exam_id: None},
         synchronize_session=False,
     )
+    db.query(ExamCodeDraft).filter(
+        ExamCodeDraft.exam_id == exam_id
+    ).delete(synchronize_session=False)
     db.query(ExamAttempt).filter(ExamAttempt.exam_id == exam_id).delete(
         synchronize_session=False,
     )
@@ -958,6 +964,125 @@ def start_exam(
         attempt_id=attempt.id,
         status=attempt.status,
         started_at=attempt.started_at,
+    )
+
+
+@router.get("/exams/{exam_id}/drafts/{problem_id}", response_model=CodeDraftOut)
+def get_exam_draft(
+    exam_id: int,
+    problem_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> CodeDraftOut:
+    exam = db.query(Exam).filter(Exam.id == exam_id).first()
+    if exam is None:
+        raise HTTPException(status_code=404, detail="考试不存在")
+    if not _can_access_exam(db, exam, user):
+        raise HTTPException(status_code=403, detail="无权访问该考试")
+    problem_link = (
+        db.query(ExamProblem)
+        .filter(
+            ExamProblem.exam_id == exam_id,
+            ExamProblem.problem_id == problem_id,
+        )
+        .first()
+    )
+    if problem_link is None:
+        raise HTTPException(status_code=404, detail="题目不在考试中")
+
+    attempt = (
+        db.query(ExamAttempt)
+        .filter(ExamAttempt.exam_id == exam_id, ExamAttempt.user_id == user.id)
+        .first()
+    )
+    if attempt is None or attempt.status != "in_progress":
+        return CodeDraftOut(
+            code="",
+            language=problem_link.problem.language,
+            updated_at=None,
+        )
+
+    draft = (
+        db.query(ExamCodeDraft)
+        .filter(
+            ExamCodeDraft.exam_id == exam_id,
+            ExamCodeDraft.user_id == user.id,
+            ExamCodeDraft.problem_id == problem_id,
+        )
+        .first()
+    )
+    if draft is None:
+        return CodeDraftOut(
+            code="",
+            language=problem_link.problem.language,
+            updated_at=None,
+        )
+    return CodeDraftOut(
+        code=draft.code,
+        language=draft.language,
+        updated_at=draft.updated_at,
+    )
+
+
+@router.put("/exams/{exam_id}/drafts/{problem_id}", response_model=CodeDraftOut)
+def save_exam_draft(
+    exam_id: int,
+    problem_id: int,
+    payload: CodeDraftSave,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> CodeDraftOut:
+    exam = db.query(Exam).filter(Exam.id == exam_id).first()
+    if exam is None:
+        raise HTTPException(status_code=404, detail="考试不存在")
+    if not _can_access_exam(db, exam, user):
+        raise HTTPException(status_code=403, detail="无权访问该考试")
+    problem_link = (
+        db.query(ExamProblem)
+        .filter(
+            ExamProblem.exam_id == exam_id,
+            ExamProblem.problem_id == problem_id,
+        )
+        .first()
+    )
+    if problem_link is None:
+        raise HTTPException(status_code=404, detail="题目不在考试中")
+
+    attempt = (
+        db.query(ExamAttempt)
+        .filter(ExamAttempt.exam_id == exam_id, ExamAttempt.user_id == user.id)
+        .first()
+    )
+    if attempt is None or attempt.status != "in_progress":
+        raise HTTPException(status_code=400, detail="请先开始考试")
+
+    draft = (
+        db.query(ExamCodeDraft)
+        .filter(
+            ExamCodeDraft.exam_id == exam_id,
+            ExamCodeDraft.user_id == user.id,
+            ExamCodeDraft.problem_id == problem_id,
+        )
+        .first()
+    )
+    if draft is None:
+        draft = ExamCodeDraft(
+            exam_id=exam_id,
+            user_id=user.id,
+            problem_id=problem_id,
+            code=payload.code,
+            language=payload.language,
+        )
+        db.add(draft)
+    else:
+        draft.code = payload.code
+        draft.language = payload.language
+    db.commit()
+    db.refresh(draft)
+    return CodeDraftOut(
+        code=draft.code,
+        language=draft.language,
+        updated_at=draft.updated_at,
     )
 
 

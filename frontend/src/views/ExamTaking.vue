@@ -68,7 +68,9 @@ async function loadProblemCode() {
   if (!problem) return;
   code.value = EXAM_STARTERS[problem.language] || "";
   try {
-    const { data: draft } = await api.get(`/drafts/${problem.problem_id}`);
+    const { data: draft } = await api.get(
+      `/exams/${route.params.id}/drafts/${problem.problem_id}`,
+    );
     if (draft.code) {
       code.value = draft.code;
     }
@@ -81,10 +83,13 @@ async function saveDraft() {
   const problem = currentProblem.value;
   if (!problem || exam.value?.attempt_status !== "in_progress") return;
   try {
-    await api.put(`/drafts/${problem.problem_id}`, {
-      code: code.value,
-      language: problem.language,
-    });
+    await api.put(
+      `/exams/${route.params.id}/drafts/${problem.problem_id}`,
+      {
+        code: code.value,
+        language: problem.language,
+      },
+    );
   } catch {
     // draft failure should not block exam submission
   }

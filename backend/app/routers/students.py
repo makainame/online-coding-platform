@@ -12,6 +12,7 @@ from ..models import (
     ClassGroup,
     CodeDraft,
     ExamAttempt,
+    ExamCodeDraft,
     Feedback,
     Problem,
     Submission,
@@ -372,6 +373,9 @@ def delete_student(
     ).delete(synchronize_session=False)
     db.query(CodeDraft).filter(
         CodeDraft.user_id == student_id
+    ).delete(synchronize_session=False)
+    db.query(ExamCodeDraft).filter(
+        ExamCodeDraft.user_id == student_id
     ).delete(synchronize_session=False)
     db.query(AuthToken).filter(
         AuthToken.user_id == student_id
