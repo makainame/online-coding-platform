@@ -17,6 +17,8 @@ const running = ref(false);
 const submitting = ref(false);
 const submittingExam = ref(false);
 const timerText = ref("");
+const customInput = ref("");
+const showCustomInput = ref(false);
 const pasteCount = ref(0);
 const switchCount = ref(0);
 let saveTimer = null;
@@ -181,12 +183,16 @@ async function runCode() {
   result.value = null;
   errorMessage.value = "";
   try {
-    const { data } = await api.post("/execute", {
+    const payload = {
       problem_id: problem.problem_id,
       code: code.value,
       language: problem.language,
       mode: "run",
-    });
+    };
+    if (customInput.value.trim() !== "") {
+      payload.custom_input = customInput.value;
+    }
+    const { data } = await api.post("/execute", payload);
     result.value = data;
   } catch (error) {
     errorMessage.value = error.response?.data?.detail || error.message;
@@ -411,6 +417,21 @@ onBeforeUnmount(() => {
           </div>
           <h2>{{ currentProblem?.title }}</h2>
           <div class="description" v-html="formatRichText(currentProblem?.description)"></div>
+          <div class="result-block">
+            <div class="editor-toolbar">
+              <span class="role-chip">自定义输入</span>
+              <el-button link type="primary" @click="showCustomInput = !showCustomInput">
+                {{ showCustomInput ? "收起" : "展开" }}
+              </el-button>
+            </div>
+            <el-input
+              v-if="showCustomInput"
+              v-model="customInput"
+              type="textarea"
+              :rows="4"
+              placeholder="输入测试数据"
+            />
+          </div>
         </section>
 
         <section class="work-panel">
