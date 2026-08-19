@@ -26,8 +26,8 @@ jobs:
 
       - name: Install rsync
         run: |
-          sudo apt-get update
-          sudo apt-get install -y rsync
+          sudo apt-get update || true
+          sudo apt-get install -y rsync || true
 
       - name: Sync and deploy
         env:
@@ -40,6 +40,13 @@ jobs:
           mkdir -p ~/.ssh
           printf '%s\n' "$ECS_SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
+
+          ssh -p "$ECS_PORT" \
+            -i ~/.ssh/id_ed25519 \
+            -o StrictHostKeyChecking=no \
+            -o IdentitiesOnly=yes \
+            "$ECS_USER@$ECS_HOST" \
+            "docker builder prune -f || true; docker image prune -f || true"
 
           rsync -az --delete \
             --exclude '.git/' \
