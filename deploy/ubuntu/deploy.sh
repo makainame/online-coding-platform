@@ -11,6 +11,9 @@ fi
 
 cd "$APP_DIR"
 
+echo "==> 清理 Docker 构建缓存，避免磁盘占满"
+docker builder prune -f || true
+
 echo "==> 构建并启动服务"
 docker compose up -d --build
 
