@@ -5,6 +5,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import uuid
 from typing import Sequence
 
 from .. import config
@@ -18,12 +19,38 @@ def normalize_output(text: str) -> str:
     return "\n".join(line.rstrip() for line in text.strip().splitlines()).strip()
 
 
+def _docker_container_name(command: list[str]) -> str | None:
+    if "--name" not in command:
+        return None
+    index = command.index("--name")
+    if index + 1 < len(command):
+        return command[index + 1]
+    return None
+
+
+def _remove_docker_container(command: list[str]) -> None:
+    name = _docker_container_name(command)
+    if not name:
+        return
+    try:
+        subprocess.run(
+            ["docker", "rm", "-f", name],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except Exception:
+        pass
+
+
 def _docker_command(code: str) -> list[str]:
     encoded_code = base64.b64encode(code.encode("utf-8")).decode("ascii")
     return [
         "docker",
         "run",
         "--rm",
+        "--name",
+        f"coding_platform_{uuid.uuid4().hex[:12]}",
         "-i",
         "--network",
         "none",
@@ -143,8 +170,9 @@ def run_python_code_docker(code: str, test_cases: Sequence[TestCase], timeout: i
             error = ""
             runtime_error = False
             try:
+                command = _docker_command(code)
                 process = subprocess.run(
-                    _docker_command(code),
+                    command,
                     input=case.input,
                     capture_output=True,
                     text=True,
@@ -163,11 +191,13 @@ def run_python_code_docker(code: str, test_cases: Sequence[TestCase], timeout: i
                     if not passed:
                         error = "输出与预期结果不一致"
             except subprocess.TimeoutExpired:
+                _remove_docker_container(command)
                 runtime_error = True
                 elapsed = time.monotonic() - started
                 total_time += elapsed
                 error = f"运行超时（超过 {timeout} 秒）"
             except Exception as exc:
+                _remove_docker_container(command)
                 runtime_error = True
                 elapsed = time.monotonic() - started
                 total_time += elapsed
@@ -206,6 +236,8 @@ def _node_docker_command(code: str) -> list[str]:
         "docker",
         "run",
         "--rm",
+        "--name",
+        f"coding_platform_{uuid.uuid4().hex[:12]}",
         "-i",
         "--network",
         "none",
@@ -266,11 +298,13 @@ def _run_test_cases(
                 if not passed:
                     error = "输出与预期结果不一致"
         except subprocess.TimeoutExpired:
+            _remove_docker_container(command)
             runtime_error = True
             elapsed = time.monotonic() - started
             total_time += elapsed
             error = f"运行超时（超过 {timeout} 秒）"
         except Exception as exc:  # pragma: no cover - defensive
+            _remove_docker_container(command)
             runtime_error = True
             elapsed = time.monotonic() - started
             total_time += elapsed
@@ -386,6 +420,7 @@ def _run_custom_command(
             ],
         )
     except subprocess.TimeoutExpired:
+        _remove_docker_container(command)
         elapsed = time.monotonic() - started
         error = f"运行超时（超过 {timeout} 秒）"
         return ExecuteResultOut(
@@ -445,6 +480,8 @@ def _java_docker_command(code: str) -> list[str]:
         "docker",
         "run",
         "--rm",
+        "--name",
+        f"coding_platform_{uuid.uuid4().hex[:12]}",
         "-i",
         "--network",
         "none",
@@ -476,6 +513,8 @@ def _cpp_docker_command(code: str) -> list[str]:
         "docker",
         "run",
         "--rm",
+        "--name",
+        f"coding_platform_{uuid.uuid4().hex[:12]}",
         "-i",
         "--network",
         "none",
@@ -837,8 +876,9 @@ def run_custom_python_docker(code: str, custom_input: str, timeout: int = EXECUT
     try:
         started = time.monotonic()
         try:
+            command = _docker_command(code)
             process = subprocess.run(
-                _docker_command(code),
+                command,
                 input=custom_input,
                 capture_output=True,
                 text=True,
@@ -879,6 +919,7 @@ def run_custom_python_docker(code: str, custom_input: str, timeout: int = EXECUT
                 ],
             )
         except subprocess.TimeoutExpired:
+            _remove_docker_container(command)
             elapsed = time.monotonic() - started
             error = f"运行超时（超过 {timeout} 秒）"
             return ExecuteResultOut(
@@ -895,6 +936,9 @@ def run_custom_python_docker(code: str, custom_input: str, timeout: int = EXECUT
                     )
                 ],
             )
+        except Exception:
+            _remove_docker_container(command)
+            raise
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
 

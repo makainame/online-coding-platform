@@ -8,10 +8,10 @@ def test_docker_command_encodes_code_and_enables_sandbox_limits():
     code = "print(1 + 1)"
     command = executor._docker_command(code)
 
-    assert command[:12] == [
-        "docker",
-        "run",
-        "--rm",
+    assert command[:3] == ["docker", "run", "--rm"]
+    assert command[3:5] == ["--name", command[4]]
+    assert command[4].startswith("coding_platform_")
+    assert command[5:15] == [
         "-i",
         "--network",
         "none",
@@ -21,6 +21,7 @@ def test_docker_command_encodes_code_and_enables_sandbox_limits():
         "1",
         "--pids-limit",
         "64",
+        "--cap-drop",
     ]
     assert "--cap-drop" in command
     assert "ALL" in command
@@ -67,10 +68,10 @@ def test_node_docker_command_encodes_code_and_sandbox_limits():
     code = "console.log('hi')"
     command = executor._node_docker_command(code)
 
-    assert command[:12] == [
-        "docker",
-        "run",
-        "--rm",
+    assert command[:3] == ["docker", "run", "--rm"]
+    assert command[3:5] == ["--name", command[4]]
+    assert command[4].startswith("coding_platform_")
+    assert command[5:15] == [
         "-i",
         "--network",
         "none",
@@ -80,6 +81,7 @@ def test_node_docker_command_encodes_code_and_sandbox_limits():
         "1",
         "--pids-limit",
         "64",
+        "--cap-drop",
     ]
     assert "--cap-drop" in command
     assert "ALL" in command
@@ -149,10 +151,10 @@ def test_java_docker_command_encodes_code_and_sandbox_limits():
     code = "public class Main { public static void main(String[] args) { } }"
     command = executor._java_docker_command(code)
 
-    assert command[:12] == [
-        "docker",
-        "run",
-        "--rm",
+    assert command[:3] == ["docker", "run", "--rm"]
+    assert command[3:5] == ["--name", command[4]]
+    assert command[4].startswith("coding_platform_")
+    assert command[5:15] == [
         "-i",
         "--network",
         "none",
@@ -162,6 +164,7 @@ def test_java_docker_command_encodes_code_and_sandbox_limits():
         "1",
         "--pids-limit",
         "64",
+        "--cap-drop",
     ]
     assert "--cap-drop" in command
     assert "ALL" in command
@@ -241,10 +244,10 @@ def test_cpp_docker_command_encodes_code_and_sandbox_limits():
     code = "#include <iostream>\nint main(){ std::cout << 7; }\n"
     command = executor._cpp_docker_command(code)
 
-    assert command[:12] == [
-        "docker",
-        "run",
-        "--rm",
+    assert command[:3] == ["docker", "run", "--rm"]
+    assert command[3:5] == ["--name", command[4]]
+    assert command[4].startswith("coding_platform_")
+    assert command[5:15] == [
         "-i",
         "--network",
         "none",
@@ -254,6 +257,7 @@ def test_cpp_docker_command_encodes_code_and_sandbox_limits():
         "1",
         "--pids-limit",
         "64",
+        "--cap-drop",
     ]
     assert "--cap-drop" in command
     assert "ALL" in command
